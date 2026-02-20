@@ -1,0 +1,113 @@
+---
+title: Error Reference
+description: HTTP status codes and machine-readable error codes returned by the API
+---
+
+All errors follow a consistent structure:
+
+```json
+{
+  "error": {
+    "code": "invalid_legal_basis",
+    "message": "The provided legal_basis value is not recognized.",
+    "details": [
+      {
+        "field": "options.legal_basis",
+        "issue": "Must be one of: sanctions_screening, law_enforcement_investigation, fraud_investigation, regulatory_compliance, due_diligence, internal_security"
+      }
+    ]
+  },
+  "request_id": "req_01JNQBC4X8Y2Z3A"
+}
+```
+
+Always include the `request_id` when contacting support. It links to the full request context on the Intrace side.
+
+---
+
+## 400 Bad Request
+
+The request body is malformed or a required field is missing.
+
+| Code | Cause | Resolution |
+|------|-------|------------|
+| `request_malformed` | The request body is not valid JSON. | Fix the JSON syntax. |
+| `field_required` | A required field is missing. `details` identifies the field. | Add the missing field. |
+| `field_invalid` | A field value fails validation. `details` identifies the field and constraint. | Correct the field value. |
+
+---
+
+## 401 Unauthorized
+
+The request did not include valid credentials.
+
+| Code | Cause | Resolution |
+|------|-------|------------|
+| `credentials_missing` | No `Authorization` header or `X-API-Key` header was provided. | Include credentials in the request. |
+| `token_expired` | The Bearer JWT has expired. | Obtain a new token from your IdP. |
+| `token_invalid` | The Bearer JWT signature or claims are invalid. | Check `OIDC_ISSUER_URL` and `OIDC_AUDIENCE` configuration. |
+| `api_key_invalid` | The provided API key does not exist or has been revoked. | Verify the key or request a new one from Intrace. |
+
+---
+
+## 403 Forbidden
+
+The authenticated principal does not have permission for the requested operation.
+
+| Code | Cause | Resolution |
+|------|-------|------------|
+| `insufficient_scope` | The principal's role does not grant access to this endpoint. | Contact your administrator to review role assignments. |
+| `legal_basis_not_permitted` | The organization's policy restricts this `legal_basis` value for this principal. | Use a permitted legal basis or contact your administrator. |
+
+---
+
+## 404 Not Found
+
+| Code | Cause | Resolution |
+|------|-------|------------|
+| `not_found` | The requested resource (lookup result, connector, audit record) does not exist. | Verify the ID. If querying a past result, it may have exceeded the result retention period. |
+
+---
+
+## 422 Unprocessable Entity
+
+The request is syntactically valid but cannot be processed as submitted.
+
+| Code | Cause | Resolution |
+|------|-------|------------|
+| `invalid_legal_basis` | The `legal_basis` value is not in the accepted enum. | Use one of the documented values. |
+| `invalid_identifier_type` | The `type` field of an identifier is not recognized. | Use a supported identifier type. |
+| `identifier_format_invalid` | An identifier value does not match the required format for its type (e.g. a phone number not in E.164 format). | Reformat the identifier. |
+| `no_identifiers` | The `identifiers` array is empty. | Provide at least one identifier. |
+| `too_many_identifiers` | More than 20 identifiers were submitted in a single request. | Split into multiple requests. |
+
+---
+
+## 429 Too Many Requests
+
+The request rate limit has been exceeded.
+
+| Code | Cause | Resolution |
+|------|-------|------------|
+| `rate_limit_exceeded` | The per-minute request limit for this principal has been reached. | Wait for the duration indicated by the `Retry-After` response header before retrying. |
+
+Rate limit headers are included in all `429` responses:
+
+| Header | Description |
+|--------|-------------|
+| `Retry-After` | Seconds to wait before the next request will succeed. |
+| `X-RateLimit-Limit` | The configured request limit per minute. |
+| `X-RateLimit-Remaining` | Requests remaining in the current window. |
+| `X-RateLimit-Reset` | Unix timestamp when the current window resets. |
+
+See [Rate Limits](/intelligence-engine/reference/rate-limits) for limit values and configuration.
+
+---
+
+## 500 Internal Server Error
+
+| Code | Cause | Resolution |
+|------|-------|------------|
+| `internal_error` | An unexpected error occurred in the engine. | Retry the request. If the error persists, contact Intrace support with the `request_id`. |
+| `signing_failed` | The engine could not sign the report. | Check the `SIGNING_PRIVATE_KEY_PATH` configuration and key file permissions. |
+| `database_error` | The engine could not write to its database. | Check database connectivity and disk space. |

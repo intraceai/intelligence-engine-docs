@@ -1,0 +1,173 @@
+---
+title: Analysis
+description: Running intelligence analysis against entities — interface mechanics and how to discover capabilities
+---
+
+The Analysis API runs intelligence analysis against entities resolved by the lookup engine. It is built around a capability-discovery model: the catalog of available analysis types is managed by Intrace and evolves independently of this API contract. New analysis capabilities appear in the catalog when released — no integration changes required.
+
+## How it works
+
+1. **Discover** what analysis types are available in your deployment
+2. **Inspect** the parameter schema for the type you want to run
+3. **Submit** an analysis request with your subject and parameters
+4. **Retrieve** the result by `analysis_id` if needed later
+
+Every analysis is logged to the audit trail with the authenticated principal's identity and declared legal basis, identical to lookups.
+
+---
+
+## Discovering available analysis types
+
+```bash
+GET /v1/analysis/types
+```
+
+Returns the current catalog of analysis types in this deployment:
+
+```json
+{
+  "types": [
+    {
+      "type": "some_analysis_type",
+      "status": "available",
+      "description": "...",
+      "subject_types": ["entity"],
+      "parameters_schema_url": "/v1/analysis/types/some_analysis_type"
+    },
+    {
+      "type": "another_analysis_type",
+      "status": "beta",
+      "description": "...",
+      "subject_types": ["entity"],
+      "parameters_schema_url": "/v1/analysis/types/another_analysis_type"
+    }
+  ]
+}
+```
+
+Each type carries a `status`:
+
+| Status | Meaning |
+|--------|---------|
+| `available` | Fully supported. Safe for production use. |
+| `beta` | Available but the result structure or parameters may change before general availability. |
+| `deprecated` | Will be removed. The `description` field notes the replacement. |
+
+Do not hard-code type names in long-lived integrations. Query this endpoint to confirm a type is still `available` before building a dependency on it.
+
+---
+
+## Inspecting a type's parameters
+
+```bash
+GET /v1/analysis/types/{type}
+```
+
+Returns the accepted parameters as a JSON Schema object and a narrative description of the result structure:
+
+```json
+{
+  "type": "some_analysis_type",
+  "status": "available",
+  "description": "...",
+  "subject_types": ["entity"],
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "example_param": {
+        "type": "integer",
+        "default": 2,
+        "description": "..."
+      }
+    }
+  },
+  "result_description": "..."
+}
+```
+
+The `parameters` schema is what the engine accepts. All parameters are optional unless explicitly marked as required in the schema. Unknown parameters are ignored.
+
+The result structure is documented in `result_description` but is **not enforced by the API contract**. It is intentionally kept outside the spec so individual analysis types can evolve their output without requiring a contract version bump.
+
+---
+
+## Submitting an analysis
+
+```bash
+POST /v1/analysis
+```
+
+```json
+{
+  "subject": {
+    "type": "entity",
+    "entity_id": "ent_01JNQBC4X8Y2Z3B"
+  },
+  "analysis_type": "some_analysis_type",
+  "parameters": {
+    "example_param": 3
+  },
+  "options": {
+    "legal_basis": "law_enforcement_investigation",
+    "requester_reference": "CASE-2026-00412"
+  }
+}
+```
+
+### Subject
+
+The `subject` identifies what to run the analysis against. Currently `type: entity` is supported, requiring an `entity_id` from a prior lookup. Additional subject types will be introduced alongside new analysis capabilities — consult `GET /analysis/types/{type}` for what each type accepts.
+
+### Parameters
+
+Pass parameters as a flat object. Unrecognised keys are ignored. If you omit the `parameters` field entirely, the engine uses the defaults documented for that type.
+
+### Options
+
+`legal_basis` is required. `requester_reference` is optional and recorded verbatim in the audit trail. See [Legal Basis](/intelligence-engine/compliance/legal-basis) for accepted values.
+
+---
+
+## Result envelope
+
+```json
+{
+  "analysis_id": "ana_01JNQBC4X8Y2Z3D",
+  "analysis_type": "some_analysis_type",
+  "status": "complete",
+  "subject": {
+    "type": "entity",
+    "entity_id": "ent_01JNQBC4X8Y2Z3B"
+  },
+  "queried_at": "2026-02-19T14:23:00Z",
+  "completed_at": "2026-02-19T14:23:04Z",
+  "result": {
+    "data": { },
+    "confidence": 0.84,
+    "coverage_note": null
+  },
+  "audit": { }
+}
+```
+
+The outer envelope — `analysis_id`, `status`, `subject`, timestamps, `audit` — is stable and typed. The `result.data` object is type-specific and documented per type at `GET /analysis/types/{type}`.
+
+`confidence` is present when the analysis type produces one. Not all types do. `coverage_note` is set when the result may be incomplete due to connector availability or insufficient source data.
+
+When `status` is `failed`, `result` is null and `error` is populated with a `code` and human-readable `message`.
+
+---
+
+## Retrieving a past result
+
+```bash
+GET /v1/analysis/{analysis_id}
+```
+
+Returns a previously completed analysis. Results are retained for the duration of your deployment's configured retention period.
+
+---
+
+## Unimplemented types
+
+If you submit a valid `analysis_type` that is not yet available in your deployment, the engine returns `501 Not Implemented` with error code `analysis_type_not_available`. This allows you to integrate against the full catalog shape ahead of individual type releases.

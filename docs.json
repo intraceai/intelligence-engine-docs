@@ -1,0 +1,142 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "aspen",
+  "name": "Intrace Intelligence Engine",
+  "openapi": "/openapi.yaml",
+  "colors": {
+    "primary": "#363636",
+    "light": "#ADADAD",
+    "dark": "#A60005"
+  },
+  "background": {
+    "color": {
+      "light": "#ffffff",
+      "dark": "#09090B"
+    }
+  },
+  "fonts": {
+    "heading": {
+      "family": "Inter",
+      "weight": 400
+    },
+    "body": {
+      "family": "Inter",
+      "weight": 400
+    }
+  },
+  "favicon": "/favicon.ico",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "OVERVIEW",
+            "pages": [
+              "intelligence-engine/introduction",
+              "intelligence-engine/core-concepts",
+              "intelligence-engine/traceability"
+            ]
+          },
+          {
+            "group": "DEPLOYMENT",
+            "pages": [
+              "intelligence-engine/deployment/requirements",
+              "intelligence-engine/deployment/installation",
+              "intelligence-engine/deployment/configuration",
+              "intelligence-engine/deployment/connectors",
+              "intelligence-engine/deployment/identity-provider"
+            ]
+          },
+          {
+            "group": "COMPLIANCE",
+            "pages": [
+              "intelligence-engine/compliance/legal-basis",
+              "intelligence-engine/compliance/audit-log",
+              "intelligence-engine/compliance/chain-of-custody"
+            ]
+          },
+          {
+            "group": "ANALYSIS",
+            "pages": [
+              "intelligence-engine/analysis"
+            ]
+          },
+          {
+            "group": "REFERENCE",
+            "pages": [
+              "intelligence-engine/reference/errors",
+              "intelligence-engine/reference/rate-limits",
+              "intelligence-engine/reference/changelog"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "LOOKUP",
+            "pages": [
+              "intelligence-engine/api/lookup-post",
+              "intelligence-engine/api/lookup-get"
+            ]
+          },
+          {
+            "group": "ANALYSIS",
+            "pages": [
+              "intelligence-engine/api/analysis-types-list",
+              "intelligence-engine/api/analysis-types-get",
+              "intelligence-engine/api/analysis-submit",
+              "intelligence-engine/api/analysis-get"
+            ]
+          },
+          {
+            "group": "CONNECTORS",
+            "pages": [
+              "intelligence-engine/api/connectors-list",
+              "intelligence-engine/api/connectors-health"
+            ]
+          },
+          {
+            "group": "AUDIT",
+            "pages": [
+              "intelligence-engine/api/audit-list",
+              "intelligence-engine/api/audit-get"
+            ]
+          },
+          {
+            "group": "REPORTS",
+            "pages": [
+              "intelligence-engine/api/reports-pdf",
+              "intelligence-engine/api/reports-verify"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "mailto:team@intrace.com"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://app.intrace.ai"
+    }
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/intraceai",
+      "linkedin": "https://linkedin.com/company/intraceai"
+    }
+  }
+}

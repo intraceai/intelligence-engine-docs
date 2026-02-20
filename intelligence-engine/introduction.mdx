@@ -1,0 +1,38 @@
+---
+title: Introduction
+description: What the Intrace Intelligence Engine is and how to use it
+---
+
+The Intrace Intelligence Engine resolves digital identifiers — email addresses, phone numbers, usernames, IP addresses, and more — into structured, multi-source entity profiles. It is designed for deployment in your organization's infrastructure and integrates with your existing identity provider.
+
+## What it does
+
+Submit one or more identifiers in a single API call. The engine:
+
+1. Queries all configured intelligence connectors in parallel
+2. Resolves the identifiers to one or more candidate entities
+3. Assembles a unified profile with full source attribution
+4. Returns the result with a tamper-evident signature and an immutable audit record
+
+Every field in the profile links back to the source that produced it. Every query is logged with the authenticated user's identity and the declared legal basis.
+
+## How it is deployed
+
+The engine runs entirely within your organization's network. It is distributed as a container image and deployed via Docker Compose or Helm. It calls external intelligence connectors over your existing internet egress — no data leaves your network for processing, and no query results are stored by Intrace.
+
+## Authentication
+
+The engine supports two authentication modes:
+
+| Mode | Use case | Audit attribution |
+|------|----------|-------------------|
+| SAML/OIDC Bearer token | Human analysts querying via your IdP | Individual user (`user_id`, `user_email`) |
+| API key | Automated integrations and service accounts | Service account name and key ID |
+
+Both modes produce full audit records. SAML/OIDC is recommended for any context where individual accountability is required.
+
+## Next steps
+
+- [Core concepts](/intelligence-engine/core-concepts) — understand entity resolution, confidence scores, and source coverage
+- [Deployment guide](/intelligence-engine/deployment/requirements) — system requirements and installation
+- [API reference](/intelligence-engine/api/lookup-post) — full endpoint documentation

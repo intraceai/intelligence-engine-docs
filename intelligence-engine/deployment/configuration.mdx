@@ -1,0 +1,86 @@
+---
+title: Configuration
+description: Full reference for all environment variables and configuration options
+---
+
+Configuration is supplied via environment variables, either in a `.env` file (Docker Compose) or as Kubernetes secrets and ConfigMaps (Helm). Sensitive values must never be committed to version control.
+
+## License
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `INTRACE_LICENSE_KEY` | Yes | License key issued by Intrace. Validated at startup and periodically. |
+| `INTRACE_DEPLOYMENT_ID` | Yes | Unique identifier for this deployment, issued alongside the license key. |
+| `INTRACE_LICENSE_CHECK_INTERVAL` | No | How often (in seconds) to re-validate the license with Intrace servers. Default: `3600`. |
+
+## Database
+
+The engine uses PostgreSQL to store lookup results and the audit log.
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string. Format: `postgresql://user:password@host:5432/dbname` |
+| `DATABASE_POOL_SIZE` | No | Connection pool size. Default: `10`. |
+| `DATABASE_MAX_OVERFLOW` | No | Additional connections above pool size allowed under load. Default: `5`. |
+
+## Authentication
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `AUTH_MODE` | Yes | `oidc`, `saml`, `api_key`, or `both`. Use `both` to support SSO and API key simultaneously. |
+| `OIDC_ISSUER_URL` | If `AUTH_MODE` includes `oidc` | OIDC discovery URL of your identity provider. |
+| `OIDC_AUDIENCE` | If `AUTH_MODE` includes `oidc` | Expected `aud` claim in issued JWTs. |
+| `SAML_METADATA_URL` | If `AUTH_MODE` includes `saml` | URL to your IdP's SAML metadata XML. |
+| `SAML_ENTITY_ID` | If `AUTH_MODE` includes `saml` | Entity ID registered with your IdP. |
+| `SAML_ACS_URL` | If `AUTH_MODE` includes `saml` | Assertion Consumer Service URL for this deployment. |
+| `API_KEY_HASH_SECRET` | If `AUTH_MODE` includes `api_key` | Secret used to hash API keys at rest. Generate with a cryptographically secure random generator. |
+
+See [Identity Provider Setup](/intelligence-engine/deployment/identity-provider) for detailed SAML/OIDC configuration instructions.
+
+## Connectors
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `CONNECTOR_TIMEOUT_SECONDS` | No | Per-connector request timeout. Default: `10`. |
+| `CONNECTOR_ENABLED` | No | Comma-separated list of connector IDs to enable. Defaults to all licensed connectors. |
+
+For connectors using BYOK (bring your own key), connector-specific credential variables are documented in [Connector Reference](/intelligence-engine/deployment/connectors).
+
+## Report signing
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SIGNING_PRIVATE_KEY_PATH` | Yes | Path to the PEM-encoded RSA private key used to sign reports. |
+| `SIGNING_KEY_ID` | Yes | Identifier for the signing key, included in report signatures to support key rotation. |
+
+The private key must be RSA-4096 minimum. Generate one with:
+
+```bash
+openssl genrsa -out signing.key 4096
+```
+
+Store the key as a Kubernetes secret or Docker secret — do not place it in the `.env` file in production.
+
+## Data retention
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `RESULT_RETENTION_DAYS` | No | How long to retain lookup results. Default: `365`. Set to `0` to disable retention (results are not retrievable after the initial response). |
+| `AUDIT_RETENTION_DAYS` | No | How long to retain audit records. Default: `2555` (7 years). Audit records cannot be set to `0` — they must be retained for the configured period. |
+
+## Rate limiting
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `RATE_LIMIT_REQUESTS_PER_MINUTE` | No | Per-API-key or per-user request limit. Default: `60`. |
+| `RATE_LIMIT_BURST` | No | Maximum burst above the per-minute rate. Default: `10`. |
+
+## Observability
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `LOG_LEVEL` | No | `debug`, `info`, `warning`, `error`. Default: `info`. |
+| `LOG_FORMAT` | No | `json` or `text`. Default: `json`. Use `text` for local development. |
+| `METRICS_ENABLED` | No | Expose Prometheus metrics at `/metrics`. Default: `true`. |
+| `METRICS_PORT` | No | Port for the metrics endpoint. Default: `9090`. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | No | OpenTelemetry collector endpoint for distributed tracing. |

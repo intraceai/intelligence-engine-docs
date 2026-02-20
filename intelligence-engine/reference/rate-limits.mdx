@@ -1,0 +1,44 @@
+---
+title: Rate Limits
+description: Request limits, burst behavior, and configuration
+---
+
+Rate limits are applied per authenticated principal — per user (for SAML/OIDC) or per API key (for service accounts). Limits are enforced using a sliding window algorithm.
+
+## Default limits
+
+| Limit | Default | Applies to |
+|-------|---------|-----------|
+| Requests per minute | 60 | All endpoints combined |
+| Burst | 10 | Additional requests above the per-minute rate allowed in short bursts |
+| `depth: deep` lookups per minute | 10 | `POST /v1/lookup` with `depth: deep` only |
+
+## Changing limits
+
+Limits are configurable per deployment via environment variables:
+
+```bash
+RATE_LIMIT_REQUESTS_PER_MINUTE=60
+RATE_LIMIT_BURST=10
+RATE_LIMIT_DEEP_LOOKUPS_PER_MINUTE=10
+```
+
+Per-principal overrides (e.g. higher limits for a specific service account) are configured in the deployment's role configuration file. Contact Intrace for details on custom limit tiers.
+
+## Rate limit headers
+
+Every API response includes rate limit headers:
+
+| Header | Description |
+|--------|-------------|
+| `X-RateLimit-Limit` | The request limit per minute for this principal. |
+| `X-RateLimit-Remaining` | Requests remaining in the current window. |
+| `X-RateLimit-Reset` | Unix timestamp when the current window resets. |
+
+When the limit is exceeded, the response is `429 Too Many Requests` with a `Retry-After` header indicating how many seconds to wait.
+
+## Recommendations
+
+- For batch processing, space requests to stay within the per-minute limit rather than bursting and waiting.
+- Use `depth: standard` for high-volume screening workflows. Reserve `depth: deep` for targeted investigations where broader coverage is required.
+- Monitor `X-RateLimit-Remaining` in your integration and back off gracefully when it approaches zero.

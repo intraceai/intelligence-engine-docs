@@ -1,0 +1,35 @@
+---
+title: Changelog
+description: API versioning policy and release history
+---
+
+## Versioning policy
+
+The Intelligence Engine API is versioned by URL path prefix (`/v1`). Breaking changes are introduced only in new major versions (`/v2`), with a minimum deprecation notice of 6 months.
+
+A change is considered **breaking** if it:
+- Removes or renames a field in a response schema
+- Changes the type of an existing field
+- Removes an accepted request parameter or enum value
+- Changes the semantics of an existing endpoint in a way that alters caller behavior
+
+A change is considered **non-breaking** (and may be released without a version increment) if it:
+- Adds a new optional request parameter
+- Adds a new field to a response schema
+- Adds a new enum value to a non-exhaustive field
+- Adds a new endpoint
+
+Callers should be written to ignore unknown fields in responses to remain compatible with non-breaking additions.
+
+## Releases
+
+### v1.0.0 — Initial release
+
+- `POST /v1/lookup` — identifier lookup with entity resolution
+- `GET /v1/lookup/{request_id}` — result retrieval
+- `GET /v1/connectors` and `GET /v1/connectors/{id}/health` — connector status
+- `GET /v1/audit` and `GET /v1/audit/{request_id}` — audit log
+- `GET /v1/reports/{request_id}/pdf` — signed PDF export
+- `GET /v1/reports/{request_id}/verify` — report integrity verification
+- SAML 2.0 and OIDC authentication
+- RSA-PSS report signing

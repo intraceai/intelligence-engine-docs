@@ -1,0 +1,89 @@
+---
+title: Audit Log
+description: Querying and interpreting the immutable audit trail for all lookups
+---
+
+Every query submitted to the Intelligence Engine — regardless of whether it returned results — produces an immutable audit record. Records are append-only and cannot be modified or deleted, even by administrators.
+
+## Audit record structure
+
+```json
+{
+  "request_id": "req_01JNQBC4X8Y2Z3A",
+  "principal": {
+    "type": "user",
+    "user_id": "u_treasury_jsmith",
+    "user_email": "j.smith@treasury.gov",
+    "idp_session_id": "saml_sess_abc123",
+    "api_key_id": null,
+    "service_account_name": null
+  },
+  "organization_id": "org_treasury_ofac",
+  "source_ip": "10.14.2.55",
+  "legal_basis": "sanctions_screening",
+  "requester_reference": "CASE-2026-00412",
+  "identifiers_queried": 2,
+  "logged_at": "2026-02-19T14:23:01Z"
+}
+```
+
+### Principal
+
+The `principal` object identifies who performed the query:
+
+- **User query (SAML/OIDC)**: `type` is `user`. `user_id` and `user_email` are populated from the identity provider's claims. `idp_session_id` is populated if the IdP includes a session identifier in the token.
+- **Service account query (API key)**: `type` is `service_account`. `api_key_id` and `service_account_name` are populated. User fields are null.
+
+### `identifiers_queried`
+
+The number of identifiers submitted in the request. The actual identifier values are **not** stored in the audit log — only the count. This limits PII exposure in the audit trail while preserving accountability.
+
+If you need to correlate an audit record back to the specific identifiers queried, use the `request_id` to retrieve the full lookup result via `GET /v1/lookup/{request_id}` (subject to your configured result retention period).
+
+## Querying the audit log
+
+Use `GET /v1/audit` to retrieve records:
+
+```bash
+# All queries in January 2026
+curl "https://your-hostname/v1/audit?from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00Z" \
+  -H "X-API-Key: your_api_key"
+
+# Queries by a specific user
+curl "https://your-hostname/v1/audit?user_id=u_treasury_jsmith" \
+  -H "X-API-Key: your_api_key"
+
+# Queries with a specific legal basis
+curl "https://your-hostname/v1/audit?legal_basis=sanctions_screening" \
+  -H "X-API-Key: your_api_key"
+```
+
+Results are paginated. If `next_cursor` is present in the response, pass it as `?cursor=` to retrieve the next page.
+
+## Retrieving a single audit record
+
+```bash
+curl "https://your-hostname/v1/audit/req_01JNQBC4X8Y2Z3A" \
+  -H "X-API-Key: your_api_key"
+```
+
+## Retention
+
+The default audit retention period is 7 years (2,555 days). This is configurable via `AUDIT_RETENTION_DAYS` but cannot be set to zero — the engine enforces a minimum retention period of 1 year.
+
+Records older than the retention period are purged automatically during scheduled maintenance windows.
+
+## Access control
+
+Audit log access is restricted to principals with the `audit:read` permission scope. By default this is granted to:
+
+- **Service accounts** with the `audit` role
+- **SSO users** whose IdP groups map to the `audit` role in the engine's role configuration
+
+Individual analysts do not have access to the audit log by default — they can only retrieve their own query results. This separation ensures that audit log access is controlled independently of query access.
+
+## Correlation with your IdP logs
+
+The `idp_session_id` field allows you to correlate audit records with your identity provider's own session and access logs. For SAML deployments, this corresponds to the `SessionIndex` in the assertion. For OIDC deployments, this is the `sid` or `jti` claim if your IdP includes one.
+
+This is particularly useful when responding to a security incident — you can trace a suspicious query in the audit log back to the user's IdP session and from there to their full authentication history in your IdP.

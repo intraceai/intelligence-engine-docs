@@ -1,0 +1,120 @@
+---
+title: Installation
+description: Step-by-step guide to deploying the Intelligence Engine on-premises
+---
+
+## Before you begin
+
+- Review [System Requirements](/intelligence-engine/deployment/requirements)
+- Obtain your license key and container registry credentials from Intrace
+- Decide whether you are deploying with Docker Compose (single node) or Helm (Kubernetes)
+
+## Docker Compose
+
+### 1. Authenticate with the container registry
+
+```bash
+docker login registry.intrace.ai \
+  --username YOUR_REGISTRY_USERNAME \
+  --password YOUR_REGISTRY_PASSWORD
+```
+
+### 2. Download the Compose bundle
+
+```bash
+curl -O https://releases.intrace.ai/intelligence-engine/latest/docker-compose.yml
+curl -O https://releases.intrace.ai/intelligence-engine/latest/.env.example
+cp .env.example .env
+```
+
+### 3. Configure the environment
+
+Edit `.env` with your deployment-specific values. See [Configuration](/intelligence-engine/deployment/configuration) for a full reference of all environment variables.
+
+At minimum, set:
+
+```bash
+INTRACE_LICENSE_KEY=your_license_key
+INTRACE_DEPLOYMENT_ID=your_deployment_id
+DATABASE_URL=postgresql://user:password@db:5432/intelligence
+```
+
+### 4. Start the engine
+
+```bash
+docker compose up -d
+```
+
+### 5. Verify the deployment
+
+```bash
+curl -f https://your-hostname/health
+```
+
+A successful response returns `{"status": "ok"}`. If the response includes `"license": "invalid"` or the service fails to start, check that `INTRACE_LICENSE_KEY` is set correctly and that `license.intrace.ai:443` is reachable from the host.
+
+### 6. Verify connector reachability
+
+```bash
+curl -H "X-API-Key: your_api_key" https://your-hostname/v1/connectors
+```
+
+Review the `status` field for each connector. Any connector with `"status": "unreachable"` requires a firewall egress rule. See [Connector Reference](/intelligence-engine/deployment/connectors) for the required hostnames and ports per connector.
+
+---
+
+## Helm (Kubernetes)
+
+### 1. Add the Intrace Helm repository
+
+```bash
+helm repo add intrace https://charts.intrace.ai
+helm repo update
+```
+
+### 2. Create a values file
+
+```bash
+helm show values intrace/intelligence-engine > values.yaml
+```
+
+Edit `values.yaml` with your deployment-specific configuration. The required values are documented inline in the file.
+
+### 3. Create the license secret
+
+```bash
+kubectl create secret generic intrace-license \
+  --from-literal=license-key=YOUR_LICENSE_KEY \
+  --from-literal=deployment-id=YOUR_DEPLOYMENT_ID
+```
+
+### 4. Install the chart
+
+```bash
+helm install intelligence-engine intrace/intelligence-engine \
+  --namespace intelligence-engine \
+  --create-namespace \
+  --values values.yaml
+```
+
+### 5. Verify the rollout
+
+```bash
+kubectl rollout status deployment/intelligence-engine -n intelligence-engine
+```
+
+---
+
+## First-run health check
+
+After installation, confirm the following before routing production traffic:
+
+- [ ] `/health` returns `{"status": "ok"}`
+- [ ] License is valid (check engine logs for `license validated`)
+- [ ] At least one connector is `reachable` via `GET /v1/connectors`
+- [ ] SAML/OIDC or API key authentication is working (see [Identity Provider Setup](/intelligence-engine/deployment/identity-provider))
+- [ ] A test lookup returns a response (even `"status": "no_match"` confirms the pipeline is working)
+
+## Next step
+
+[Configuration Reference](/intelligence-engine/deployment/configuration)

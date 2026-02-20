@@ -1,0 +1,103 @@
+---
+title: Chain of Custody
+description: How to establish and verify the integrity of intelligence reports for legal or evidentiary use
+---
+
+Intelligence reports produced by the engine are cryptographically signed at the moment of generation. This enables any party — including legal counsel, auditors, or courts — to independently verify that a report has not been altered since it was produced.
+
+## How signing works
+
+When a lookup completes, the engine:
+
+1. Serializes the full response to a canonical JSON representation (sorted keys, no insignificant whitespace)
+2. Computes a SHA-256 hash of the canonical JSON
+3. Signs the hash using the deployment's RSA-4096 private key (RSA-PSS scheme)
+4. Embeds the hash, signature, signing key ID, and timestamp in the response
+
+These values appear in the `traceability` object of each entity in the response:
+
+```json
+"traceability": {
+  "report_hash": "sha256:abc123def456...",
+  "report_signature": "base64-encoded-signature...",
+  "signed_at": "2026-02-19T14:23:01Z"
+}
+```
+
+The private key never leaves the deployment host. Intrace does not have access to it.
+
+## Verifying a report
+
+### Via API
+
+```bash
+curl "https://your-hostname/v1/reports/req_01JNQBC4X8Y2Z3A/verify" \
+  -H "X-API-Key: your_api_key"
+```
+
+Response when the report is intact:
+
+```json
+{
+  "request_id": "req_01JNQBC4X8Y2Z3A",
+  "verified": true,
+  "report_hash": "sha256:abc123def456...",
+  "signed_at": "2026-02-19T14:23:01Z",
+  "checked_at": "2026-02-19T15:00:00Z",
+  "failure_reason": null
+}
+```
+
+Response when verification fails:
+
+```json
+{
+  "request_id": "req_01JNQBC4X8Y2Z3A",
+  "verified": false,
+  "report_hash": "sha256:abc123def456...",
+  "signed_at": "2026-02-19T14:23:01Z",
+  "checked_at": "2026-02-19T15:00:00Z",
+  "failure_reason": "hash_mismatch"
+}
+```
+
+### Via PDF
+
+The PDF export (`GET /reports/{request_id}/pdf`) includes the report hash and signature on its cover page alongside the signing key ID and timestamp. Any party who holds the deployment's public key can verify the PDF's cover page data against the signature independently, without calling the API.
+
+## What the chain of custody proves
+
+A verified report establishes:
+
+- **The content of the report at the moment the query was executed** — exactly what the engine returned, with source attribution
+- **When the query was executed** — `signed_at` in the signature
+- **That the report has not been modified** since it was signed — the hash and signature together provide tamper evidence
+- **Who executed the query** — via the audit record linked by `request_id`
+
+Together with the audit record (which identifies the authenticated user, their legal basis declaration, and source IP), this constitutes a complete chain of custody for the intelligence collected.
+
+## Key rotation
+
+The signing key is identified by a `signing_key_id` embedded in each signature. When you rotate the deployment's signing key:
+
+- Reports signed with the old key remain verifiable as long as you retain the old public key
+- New reports are signed with the new key
+- The `/verify` endpoint handles multiple key versions automatically using the `signing_key_id` stored in each record
+
+To rotate the signing key:
+
+1. Generate a new RSA-4096 key pair
+2. Register the new public key with the engine via your deployment configuration
+3. Update `SIGNING_PRIVATE_KEY_PATH` and `SIGNING_KEY_ID` and restart the engine
+
+The old public key should be archived permanently — it is needed to verify any report signed before the rotation.
+
+## Sharing reports externally
+
+When providing a report to a third party (legal counsel, regulator, court):
+
+1. Export the signed PDF: `GET /reports/{request_id}/pdf`
+2. Provide the PDF and your deployment's public key
+3. The recipient can verify the PDF's hash and signature independently using standard cryptographic tools
+
+If the recipient does not have direct access to your deployment, they can verify the signature offline using the public key you provide.

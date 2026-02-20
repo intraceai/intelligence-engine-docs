@@ -1,0 +1,78 @@
+---
+title: Traceability & Chain of Custody
+description: How source attribution, report signing, and audit logging work
+---
+
+Every lookup result produced by the Intelligence Engine is fully traceable. This page explains the three layers of traceability and how to use them in compliance and evidentiary contexts.
+
+## 1. Source attribution
+
+Every data point in an entity profile carries a `sources` array referencing the specific connectors that produced it. The `traceability.data_lineage` map in each entity links JSON path expressions to source IDs:
+
+```json
+"data_lineage": {
+  "profile.names[0].value": ["src_001", "src_004"],
+  "profile.phones[0].value": ["src_002"]
+}
+```
+
+This means that for any field in the profile, you can trace exactly which source produced it, when that source was queried, and the engine's confidence in that source's data.
+
+The full source list is in `traceability.sources`, which includes source name, category, retrieval timestamp, and per-source confidence.
+
+## 2. Report signing
+
+When a lookup completes, the engine computes a canonical SHA-256 hash of the full JSON response and signs it using the deployment's private key (RSA-PSS). This produces:
+
+- **`report_hash`** — the hash of the report at time of generation
+- **`report_signature`** — the cryptographic signature over the hash
+- **`signed_at`** — the UTC timestamp of signing
+
+These values are embedded in the response and in the PDF export. They cannot be altered without invalidating the signature.
+
+### Verifying a report
+
+Use `GET /reports/{request_id}/verify` to confirm that a report has not been tampered with since it was generated:
+
+```json
+{
+  "request_id": "req_01JNQBC4X8Y2Z3A",
+  "verified": true,
+  "report_hash": "sha256:abc123def456...",
+  "signed_at": "2026-02-19T14:23:01Z",
+  "checked_at": "2026-02-19T15:00:00Z"
+}
+```
+
+If `verified` is `false`, `failure_reason` explains why. This endpoint is designed to be called by legal counsel, auditors, or opposing parties to confirm the integrity of a report submitted as evidence.
+
+## 3. Audit log
+
+Every query — regardless of outcome — produces an immutable audit record containing:
+
+| Field | Description |
+|-------|-------------|
+| `request_id` | Links the audit record to the lookup result |
+| `principal.type` | `user` (SAML/OIDC) or `service_account` (API key) |
+| `principal.user_email` | The authenticated analyst's email (user queries only) |
+| `principal.idp_session_id` | IdP session ID for correlation with your IdP's own logs |
+| `source_ip` | IP address of the requesting client |
+| `legal_basis` | The declared legal basis, verbatim |
+| `requester_reference` | Caller-supplied reference (e.g. case number), if provided |
+| `logged_at` | UTC timestamp of audit record creation |
+
+Audit records cannot be modified or deleted. Use `GET /audit` to query the log, with filters for date range, user, and legal basis.
+
+## PDF export
+
+`GET /reports/{request_id}/pdf` produces a signed PDF that includes:
+
+- Cover page with `request_id`, timestamp, legal basis, and requester reference
+- Full entity profile with per-field confidence scores
+- Source attribution table
+- Source coverage disclosure (which connectors were and were not available)
+- Data lineage appendix
+- Audit record
+- Report hash and signature for independent verification
+
+The PDF is suitable for submission as a supporting document in legal, regulatory, or law enforcement proceedings.

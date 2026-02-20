@@ -1,0 +1,88 @@
+.card {
+    border-radius: 0 !important;
+  }
+
+.title {
+    font-weight: 200;
+  }
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 400 !important;
+  }
+
+/* Target only content h2 headings, not card titles */
+article h2:not([data-component-part="card-title"]), 
+.prose h2:not([data-component-part="card-title"]),
+main h2:not([data-component-part="card-title"]) {
+    font-size: 28px !important;
+  }
+
+
+
+h5 {
+    font-size: 10px !important;
+  }
+
+/* Body text size */
+
+
+/* Card styling - icons inline with title ONLY */
+.card [data-component-part="card-icon"] {
+    display: inline-flex !important;
+    align-items: center !important;
+    margin-right: 8px !important;
+    margin-bottom: 0 !important;
+    vertical-align: middle !important;
+    float: none !important;
+  }
+
+.card [data-component-part="card-title"] {
+    display: inline !important;
+    vertical-align: middle !important;
+  }
+
+/* Only make the title wrapper flex, not the whole card */
+.card [data-component-part="card-icon"] + [data-component-part="card-title"],
+.card h2, .card h3 {
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+
+/* Card description text - smaller and separate */
+.card [data-component-part="card-content"] {
+    font-size: 12px !important;
+    margin-top: 8px !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+.card [data-component-part="card-content"] p {
+    font-size: 12px !important;
+  }
+
+/* Cards with background images */
+.card-with-bg {
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    min-height: 200px;
+  }
+
+.card-with-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 0;
+  }
+
+.card-with-bg .card-content {
+    position: relative;
+    z-index: 1;
+    color: white;
+  }
+
+

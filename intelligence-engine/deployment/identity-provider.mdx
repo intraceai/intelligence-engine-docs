@@ -1,0 +1,121 @@
+---
+title: Identity Provider Setup
+description: Configuring SAML 2.0 or OIDC authentication for user-attributed queries
+---
+
+The Intelligence Engine integrates with your organization's identity provider (IdP) to authenticate users and attribute queries to specific individuals in the audit log. This enables user-level accountability rather than attribution to a shared API key.
+
+Both SAML 2.0 and OpenID Connect (OIDC) are supported. Use whichever protocol your IdP exposes.
+
+## OIDC setup
+
+OIDC is the recommended protocol for modern IdPs (Okta, Azure AD, Google Workspace, Keycloak).
+
+### 1. Register the application in your IdP
+
+Create a new application or OAuth 2.0 client in your IdP. Configure it as a **server-side (confidential) client** with the authorization code flow.
+
+Set the redirect URI to:
+```
+https://your-hostname/auth/oidc/callback
+```
+
+### 2. Note the IdP values
+
+From your IdP's application settings, collect:
+
+- **Issuer URL** (also called the discovery URL or `oidc-configuration` endpoint)
+- **Client ID**
+- **Client Secret**
+
+### 3. Configure the engine
+
+Set the following environment variables:
+
+```bash
+AUTH_MODE=oidc
+OIDC_ISSUER_URL=https://your-idp.example.com/.well-known/openid-configuration
+OIDC_CLIENT_ID=your_client_id
+OIDC_CLIENT_SECRET=your_client_secret
+OIDC_AUDIENCE=your_client_id
+```
+
+### 4. Required claims
+
+The engine reads the following claims from the issued ID token:
+
+| Claim | Required | Recorded in audit as |
+|-------|----------|---------------------|
+| `sub` | Yes | `principal.user_id` |
+| `email` | Yes | `principal.user_email` |
+| `sid` or `jti` | No | `principal.idp_session_id` |
+
+Ensure your IdP is configured to include the `email` claim in the ID token. Most IdPs include this by default but it may require adding the `profile` or `email` scope.
+
+---
+
+## SAML 2.0 setup
+
+Use SAML for IdPs that do not support OIDC, or when SAML is your organization's standard (common in government environments with Active Directory Federation Services or similar).
+
+### 1. Obtain the engine's service provider metadata
+
+After installation, the engine exposes its SAML metadata at:
+
+```
+https://your-hostname/auth/saml/metadata
+```
+
+Provide this URL to your IdP administrator to register the engine as a service provider. Alternatively, download the XML and import it manually.
+
+### 2. Configure the engine
+
+```bash
+AUTH_MODE=saml
+SAML_METADATA_URL=https://your-idp.example.com/saml/metadata
+SAML_ENTITY_ID=https://your-hostname/auth/saml/metadata
+SAML_ACS_URL=https://your-hostname/auth/saml/acs
+```
+
+If your IdP does not expose a metadata URL, you can supply the XML directly:
+
+```bash
+SAML_METADATA_XML_PATH=/path/to/idp-metadata.xml
+```
+
+### 3. Required attributes
+
+The engine reads the following SAML attributes from the assertion:
+
+| SAML Attribute | Required | Recorded in audit as |
+|---------------|----------|---------------------|
+| `NameID` | Yes | `principal.user_id` |
+| `email` or `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress` | Yes | `principal.user_email` |
+| `SessionIndex` | No | `principal.idp_session_id` |
+
+Confirm with your IdP administrator that the `email` attribute is included in the SAML assertion.
+
+---
+
+## Supporting both SSO and API keys
+
+To allow both SAML/OIDC users and service account API keys simultaneously:
+
+```bash
+AUTH_MODE=both
+```
+
+When `both` is set, the engine accepts either a `Bearer` JWT token (OIDC) or an `X-API-Key` header. Requests using API keys are attributed to the service account in the audit log. Requests using SSO tokens are attributed to the individual user.
+
+---
+
+## Testing authentication
+
+After configuration, test SSO authentication:
+
+```bash
+# Obtain a token via your IdP (method depends on your IdP)
+curl -H "Authorization: Bearer YOUR_JWT" https://your-hostname/v1/connectors
+```
+
+A `200` response confirms authentication is working. A `401` with `"code": "token_invalid"` indicates a claims or issuer configuration mismatch — check `OIDC_ISSUER_URL` and `OIDC_AUDIENCE`.

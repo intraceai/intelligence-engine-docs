@@ -1,0 +1,1549 @@
+openapi: 3.1.0
+info:
+  title: Intrace Intelligence Engine API
+  version: 1.0.0
+  description: |
+    The Intrace Intelligence Engine API resolves digital identifiers — email addresses,
+    phone numbers, usernames, IP addresses, and more — into enriched entity profiles
+    backed by multi-source intelligence.
+
+    Every response includes full source attribution, a tamper-evident report hash,
+    and an immutable audit record. The engine is designed for deployment in
+    internet-connected, firewalled environments and integrates with your organization's
+    SAML/OIDC identity provider for user-level accountability.
+
+  contact:
+    name: Intrace Support
+    email: team@intrace.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://{hostname}/v1
+    description: On-premises deployment
+    variables:
+      hostname:
+        default: intelligence.your-org.internal
+        description: Hostname of your Intrace Intelligence Engine deployment
+
+tags:
+  - name: Lookup
+    description: Submit identifier lookups and retrieve past results
+  - name: Connectors
+    description: Inspect the health and configuration of intelligence connectors
+  - name: Audit
+    description: Query the immutable audit log for all lookups performed
+  - name: Reports
+    description: Export and verify signed intelligence reports
+  - name: Analysis
+    description: Submit intelligence analysis requests and discover available analysis capabilities
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+
+paths:
+
+  /analysis/types:
+    get:
+      operationId: listAnalysisTypes
+      summary: List available analysis types
+      description: |
+        Returns all analysis types currently available in this deployment, along with
+        their status and a URL to retrieve their full parameter schema.
+
+        The catalog of available types is managed by Intrace and updated independently
+        of the API contract. New types appear here when released. Types may carry a
+        `status` of `available`, `beta`, or `deprecated`. Do not hard-code type names
+        in your integration — use this endpoint to discover what is available at runtime.
+      tags: [Analysis]
+      responses:
+        '200':
+          description: Analysis types returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisTypesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /analysis/types/{type}:
+    get:
+      operationId: getAnalysisType
+      summary: Get parameter schema for an analysis type
+      description: |
+        Returns the accepted parameters and expected result structure for a specific
+        analysis type. The `parameters` field is a JSON Schema object describing what
+        the type accepts. The result schema is descriptive — the `result.data` field
+        in analysis responses is not constrained by the API contract and may evolve
+        as the analysis type is developed.
+      tags: [Analysis]
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The analysis type identifier, as returned by `GET /analysis/types`.
+      responses:
+        '200':
+          description: Analysis type detail returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisTypeDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /analysis:
+    post:
+      operationId: submitAnalysis
+      summary: Submit an analysis request
+      description: |
+        Submits an analysis request against a subject entity. The engine runs the
+        specified analysis type with the provided parameters and returns the result
+        synchronously.
+
+        Use `GET /analysis/types` to discover what types are available and
+        `GET /analysis/types/{type}` to see what parameters each type accepts.
+
+        Every analysis request is logged to the immutable audit trail with the
+        authenticated principal's identity and the declared legal basis.
+      tags: [Analysis]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalysisRequest'
+            examples:
+              minimal:
+                summary: Minimal request with required fields only
+                value:
+                  subject:
+                    type: entity
+                    entity_id: "ent_01JNQBC4X8Y2Z3B"
+                  analysis_type: "network_centrality"
+                  options:
+                    legal_basis: law_enforcement_investigation
+      responses:
+        '200':
+          description: Analysis completed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: The subject entity was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '501':
+          description: The requested analysis type is recognised but not yet available in this deployment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /analysis/{analysis_id}:
+    get:
+      operationId: getAnalysis
+      summary: Retrieve a past analysis result
+      description: |
+        Returns a previously completed analysis by its `analysis_id`. Results are
+        retained for the duration configured in your deployment's data retention policy.
+      tags: [Analysis]
+      parameters:
+        - name: analysis_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The analysis identifier returned when the analysis was submitted.
+          example: ana_01JNQBC4X8Y2Z3D
+      responses:
+        '200':
+          description: Analysis result returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /lookup:
+    post:
+      operationId: createLookup
+      summary: Submit an identifier lookup
+      description: |
+        Resolves one or more identifiers to an entity profile. The engine attempts to
+        merge all provided identifiers into a single entity. When resolution is
+        ambiguous, all candidate entities are returned ranked by confidence.
+
+        Every call is logged immutably to the audit trail. The `legal_basis` field
+        is required and recorded verbatim.
+
+        If one or more intelligence connectors are unreachable (e.g. blocked by
+        firewall egress rules), the response is still returned with the data collected
+        from available connectors. The `source_coverage` object discloses which
+        connectors were available and which were not.
+      tags: [Lookup]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LookupRequest'
+            examples:
+              email_and_phone:
+                summary: Email + phone lookup
+                value:
+                  identifiers:
+                    - type: email
+                      value: "target@example.com"
+                    - type: phone
+                      value: "+15551234567"
+                  options:
+                    depth: standard
+                    legal_basis: sanctions_screening
+                    requester_reference: "CASE-2026-00412"
+              username_lookup:
+                summary: Username lookup
+                value:
+                  identifiers:
+                    - type: username
+                      value: "handle123"
+                  options:
+                    depth: deep
+                    legal_basis: law_enforcement_investigation
+      responses:
+        '200':
+          description: Lookup completed. Results may be partial if some connectors were unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LookupResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /lookup/{request_id}:
+    get:
+      operationId: getLookup
+      summary: Retrieve a past lookup result
+      description: |
+        Returns a previously completed lookup by its `request_id`. Results are
+        retained for the duration configured in your deployment's data retention policy.
+      tags: [Lookup]
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Lookup result found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LookupResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /connectors:
+    get:
+      operationId: listConnectors
+      summary: List all intelligence connectors
+      description: |
+        Returns all configured intelligence connectors, their current reachability
+        status, and the data categories they cover. Use this endpoint to verify that
+        your firewall egress rules allow the engine to reach all expected connectors
+        before running production queries.
+      tags: [Connectors]
+      responses:
+        '200':
+          description: Connector list returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /connectors/{connector_id}/health:
+    get:
+      operationId: getConnectorHealth
+      summary: Get health for a specific connector
+      description: |
+        Returns the current reachability and latency for a single connector.
+        Health is checked in real time on each call to this endpoint.
+      tags: [Connectors]
+      parameters:
+        - name: connector_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The connector identifier, as returned by `GET /connectors`.
+          example: commercial_lexisnexis
+      responses:
+        '200':
+          description: Connector health returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorHealth'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /audit:
+    get:
+      operationId: listAuditRecords
+      summary: Query the audit log
+      description: |
+        Returns an immutable, append-only log of all lookups performed by your
+        organization. Records cannot be modified or deleted. Supports filtering
+        by date range, user, and legal basis.
+      tags: [Audit]
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: ISO 8601 start timestamp (inclusive).
+          example: "2026-01-01T00:00:00Z"
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: ISO 8601 end timestamp (inclusive).
+          example: "2026-02-01T00:00:00Z"
+        - name: user_id
+          in: query
+          schema:
+            type: string
+          description: Filter by the identity provider user ID.
+        - name: legal_basis
+          in: query
+          schema:
+            $ref: '#/components/schemas/LegalBasis'
+          description: Filter by legal basis.
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor from a previous response.
+      responses:
+        '200':
+          description: Audit records returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /audit/{request_id}:
+    get:
+      operationId: getAuditRecord
+      summary: Get audit record for a specific lookup
+      description: Returns the audit record associated with a single lookup request.
+      tags: [Audit]
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Audit record returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditRecord'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /reports/{request_id}/pdf:
+    get:
+      operationId: exportReportPdf
+      summary: Export a signed PDF report
+      description: |
+        Generates a signed PDF of the intelligence report for the given lookup.
+        The PDF includes the full entity profile, source attribution, data lineage,
+        source coverage disclosure, and the audit record.
+
+        The PDF is cryptographically signed. Integrity can be verified independently
+        using `GET /reports/{request_id}/verify`.
+      tags: [Reports]
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Signed PDF returned.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /reports/{request_id}/verify:
+    get:
+      operationId: verifyReport
+      summary: Verify a report's integrity
+      description: |
+        Verifies the cryptographic integrity of a report. Returns whether the report
+        hash on record matches the originally generated report, confirming the result
+        has not been modified since it was produced.
+
+        Use this endpoint to establish chain of custody in legal or evidentiary contexts.
+      tags: [Reports]
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Verification result returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportVerification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT issued by your organization's SAML/OIDC identity provider after
+        authentication. Required for user-attributed queries. The `sub` claim
+        is recorded verbatim in the audit trail.
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        API key for service-account (machine-to-machine) access. Issued by Intrace
+        per integration. Audit records generated via API key are attributed to the
+        service account, not an individual user.
+
+  parameters:
+    RequestId:
+      name: request_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The unique identifier of the lookup request.
+      example: req_01JNQBC4X8Y2Z3A
+
+  responses:
+    BadRequest:
+      description: The request body is malformed or missing required fields.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Missing or invalid authentication credentials.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: Authenticated principal lacks permission for this operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: The requested resource does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    UnprocessableEntity:
+      description: Request is syntactically valid but semantically rejected (e.g. unsupported identifier type).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    RateLimited:
+      description: Request rate limit exceeded.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    InternalError:
+      description: An unexpected error occurred. Contact support with the `request_id`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+  schemas:
+
+    # -------------------------------------------------------------------------
+    # Request schemas
+    # -------------------------------------------------------------------------
+
+    LookupRequest:
+      type: object
+      required: [identifiers, options]
+      properties:
+        identifiers:
+          type: array
+          minItems: 1
+          maxItems: 20
+          description: One or more identifiers to resolve. The engine attempts to merge all into a single entity profile.
+          items:
+            $ref: '#/components/schemas/IdentifierInput'
+        options:
+          $ref: '#/components/schemas/LookupOptions'
+
+    IdentifierInput:
+      type: object
+      required: [type, value]
+      properties:
+        type:
+          $ref: '#/components/schemas/IdentifierType'
+        value:
+          type: string
+          description: The raw identifier value. Phone numbers must be E.164 formatted.
+          examples:
+            - "target@example.com"
+            - "+15551234567"
+            - "handle123"
+            - "192.0.2.1"
+
+    IdentifierType:
+      type: string
+      enum:
+        - email
+        - phone
+        - username
+        - ip
+        - domain
+        - name
+        - social_handle
+        - crypto_address
+      description: |
+        The type of identifier being submitted.
+
+        | Type | Description | Format |
+        |------|-------------|--------|
+        | `email` | Email address | RFC 5321 |
+        | `phone` | Phone number | E.164 |
+        | `username` | Platform-agnostic username | Any |
+        | `ip` | IPv4 or IPv6 address | RFC 791 / RFC 2460 |
+        | `domain` | Registered domain name | RFC 1035 |
+        | `name` | Full or partial legal name | Any |
+        | `social_handle` | Platform-specific handle (e.g. `@user`) | Any |
+        | `crypto_address` | Blockchain wallet address | Chain-specific |
+
+    LookupOptions:
+      type: object
+      required: [legal_basis]
+      properties:
+        depth:
+          $ref: '#/components/schemas/LookupDepth'
+        legal_basis:
+          $ref: '#/components/schemas/LegalBasis'
+        requester_reference:
+          type: string
+          maxLength: 256
+          description: |
+            Optional caller-controlled reference (e.g. internal case number, ticket ID).
+            Stored verbatim in the audit record and included in PDF exports.
+            Not interpreted or validated by the engine.
+          example: "CASE-2026-00412"
+
+    LookupDepth:
+      type: string
+      enum: [standard, deep]
+      default: standard
+      description: |
+        Controls how broadly the engine queries intelligence connectors.
+
+        - `standard` — queries primary connectors. Fastest response, covers most use cases.
+        - `deep` — queries all available connectors including secondary and derived sources.
+          Increases latency and connector usage; use when standard coverage is insufficient.
+
+    LegalBasis:
+      type: string
+      enum:
+        - sanctions_screening
+        - law_enforcement_investigation
+        - fraud_investigation
+        - regulatory_compliance
+        - due_diligence
+        - internal_security
+      description: |
+        The legal or operational basis for this query. Required for every lookup.
+        Recorded immutably in the audit log. Choose the most specific applicable value.
+
+        | Value | Intended use |
+        |-------|-------------|
+        | `sanctions_screening` | Checking an entity against sanctions lists (OFAC, UN, EU) |
+        | `law_enforcement_investigation` | Active law enforcement investigation |
+        | `fraud_investigation` | Investigating suspected financial fraud or identity fraud |
+        | `regulatory_compliance` | AML, KYC, or other regulatory compliance obligations |
+        | `due_diligence` | Pre-transaction or onboarding due diligence |
+        | `internal_security` | Internal threat investigation or insider risk |
+
+    # -------------------------------------------------------------------------
+    # Response schemas
+    # -------------------------------------------------------------------------
+
+    LookupResponse:
+      type: object
+      required: [request_id, queried_at, resolution, entities, source_coverage, audit]
+      properties:
+        request_id:
+          type: string
+          description: Unique identifier for this lookup. Use it to retrieve results later or to pull the PDF report.
+          example: req_01JNQBC4X8Y2Z3A
+        queried_at:
+          type: string
+          format: date-time
+          description: UTC timestamp when the query was received.
+          example: "2026-02-19T14:23:00Z"
+        resolution:
+          $ref: '#/components/schemas/EntityResolution'
+        entities:
+          type: array
+          description: |
+            Resolved entity profiles. Contains one entry when resolution is unambiguous.
+            Contains multiple entries ranked by `confidence` when the engine cannot
+            determine a single match.
+          items:
+            $ref: '#/components/schemas/Entity'
+        source_coverage:
+          $ref: '#/components/schemas/SourceCoverage'
+        audit:
+          $ref: '#/components/schemas/AuditRecord'
+
+    EntityResolution:
+      type: object
+      required: [status, confidence, entity_count]
+      properties:
+        status:
+          $ref: '#/components/schemas/ResolutionStatus'
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: |
+            Overall confidence that the returned entities accurately represent the
+            queried identifiers. Values closer to 1.0 indicate higher certainty.
+          example: 0.91
+        entity_count:
+          type: integer
+          description: Number of candidate entities returned.
+          example: 1
+
+    ResolutionStatus:
+      type: string
+      enum: [resolved, ambiguous, no_match]
+      description: |
+        - `resolved` — all identifiers map to a single entity with sufficient confidence.
+        - `ambiguous` — identifiers match multiple candidate entities. All are returned ranked by confidence. The caller should review and select the correct match.
+        - `no_match` — no entity could be associated with any of the provided identifiers.
+
+    Entity:
+      type: object
+      required: [entity_id, confidence, profile, traceability]
+      properties:
+        entity_id:
+          type: string
+          description: Stable identifier for this entity within the engine.
+          example: ent_01JNQBC4X8Y2Z3B
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Confidence that this entity matches the queried identifiers.
+          example: 0.91
+        profile:
+          $ref: '#/components/schemas/EntityProfile'
+        traceability:
+          $ref: '#/components/schemas/Traceability'
+
+    EntityProfile:
+      type: object
+      description: The enriched intelligence profile assembled for this entity.
+      properties:
+        names:
+          type: array
+          items:
+            $ref: '#/components/schemas/NameEntry'
+        emails:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailEntry'
+        phones:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhoneEntry'
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddressEntry'
+        social_profiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialProfile'
+        associates:
+          type: array
+          description: Other entities with a detected relationship to this one.
+          items:
+            $ref: '#/components/schemas/Associate'
+        risk_signals:
+          type: array
+          description: Flags and risk indicators detected across sources.
+          items:
+            $ref: '#/components/schemas/RiskSignal'
+
+    NameEntry:
+      type: object
+      required: [value, confidence, sources]
+      properties:
+        value:
+          type: string
+          example: "John A. Doe"
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.95
+        sources:
+          type: array
+          description: Source IDs that surfaced this value. References `traceability.sources[].id`.
+          items:
+            type: string
+          example: ["src_001", "src_004"]
+
+    EmailEntry:
+      type: object
+      required: [value, confidence, sources]
+      properties:
+        value:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.98
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_001"]
+
+    PhoneEntry:
+      type: object
+      required: [value, confidence, sources]
+      properties:
+        value:
+          type: string
+          description: E.164 formatted phone number.
+          example: "+15551234567"
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.87
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_002"]
+
+    AddressEntry:
+      type: object
+      required: [confidence, sources]
+      properties:
+        street:
+          type: string
+          example: "123 Main St"
+        city:
+          type: string
+          example: "Washington"
+        state:
+          type: string
+          example: "DC"
+        postal_code:
+          type: string
+          example: "20001"
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 country code.
+          example: "US"
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.82
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_003"]
+
+    SocialProfile:
+      type: object
+      required: [platform, confidence, sources]
+      properties:
+        platform:
+          type: string
+          description: The social platform or service.
+          example: "telegram"
+        handle:
+          type: string
+          example: "@jdoe_real"
+        url:
+          type: string
+          format: uri
+          example: "https://t.me/jdoe_real"
+        active:
+          type: boolean
+          description: Whether the profile was active at time of query.
+          example: true
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.89
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_002"]
+
+    Associate:
+      type: object
+      required: [relationship, confidence, sources]
+      properties:
+        entity_id:
+          type: string
+          description: Engine entity ID of the associate, if resolved.
+          example: "ent_01JNQBC4X8Y2Z3C"
+        relationship:
+          type: string
+          description: Type of detected relationship.
+          example: "frequent_contact"
+        name:
+          type: string
+          example: "Jane Smith"
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.73
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_003"]
+
+    RiskSignal:
+      type: object
+      required: [type, severity, sources]
+      properties:
+        type:
+          type: string
+          description: Machine-readable risk signal type.
+          example: "sanctions_list_match"
+        severity:
+          $ref: '#/components/schemas/RiskSeverity'
+        detail:
+          type: string
+          description: Human-readable description of the risk signal.
+          example: "OFAC SDN match: FULL NAME, DOB 1980-01-01, Designation: narcotics"
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_005"]
+
+    RiskSeverity:
+      type: string
+      enum: [critical, high, medium, low, informational]
+      description: |
+        - `critical` — requires immediate action (e.g. confirmed sanctions hit)
+        - `high` — strong indicator of significant risk
+        - `medium` — notable signal warranting review
+        - `low` — weak or unverified signal
+        - `informational` — contextual data with no direct risk implication
+
+    Traceability:
+      type: object
+      required: [report_hash, signed_at, sources, data_lineage]
+      description: |
+        Full source attribution and cryptographic integrity proof for this entity's profile.
+        Every data point in the profile links back to the source that produced it via
+        the `data_lineage` map.
+      properties:
+        report_hash:
+          type: string
+          description: SHA-256 hash of the canonical JSON report at time of generation. Use with `/reports/{request_id}/verify` to confirm integrity.
+          example: "sha256:abc123def456..."
+        report_signature:
+          type: string
+          description: Base64-encoded RSA-PSS signature over the report hash, signed by the Intrace deployment key.
+          example: "sig_base64..."
+        signed_at:
+          type: string
+          format: date-time
+          example: "2026-02-19T14:23:01Z"
+        sources:
+          type: array
+          description: All intelligence sources queried and that returned data for this entity.
+          items:
+            $ref: '#/components/schemas/SourceReference'
+        data_lineage:
+          type: object
+          description: |
+            Maps each data point in the profile to the source IDs that produced it.
+            Keys are JSON path expressions (e.g. `profile.names[0].value`).
+            Values are arrays of source IDs from `sources[].id`.
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            "profile.names[0].value": ["src_001", "src_004"]
+            "profile.phones[0].value": ["src_002"]
+
+    SourceReference:
+      type: object
+      required: [id, name, category, retrieved_at, confidence]
+      properties:
+        id:
+          type: string
+          description: Stable source identifier. Referenced in `data_lineage` and profile entries.
+          example: src_001
+        name:
+          type: string
+          description: Human-readable source name.
+          example: "LexisNexis Risk Solutions"
+        category:
+          $ref: '#/components/schemas/SourceCategory'
+        retrieved_at:
+          type: string
+          format: date-time
+          description: UTC timestamp when this source was queried.
+          example: "2026-02-19T14:23:00Z"
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Engine-assigned confidence in the accuracy of data from this source.
+          example: 0.92
+
+    SourceCategory:
+      type: string
+      enum:
+        - commercial_data_broker
+        - sanctions_list
+        - open_source_intelligence
+        - social_media
+        - dark_web
+        - public_records
+        - derived
+      description: Broad category describing the nature of the intelligence source.
+
+    SourceCoverage:
+      type: object
+      required: [available, unavailable]
+      description: |
+        Discloses which connectors were reachable during this query and which were not.
+        Always included in the response and the PDF report to ensure completeness
+        transparency in evidentiary contexts.
+      properties:
+        available:
+          type: array
+          description: Connector IDs that were reachable and queried.
+          items:
+            type: string
+          example: ["commercial_lexisnexis", "osint_shodan", "sanctions_ofac"]
+        unavailable:
+          type: array
+          description: Connector IDs that could not be reached during this query.
+          items:
+            type: string
+          example: ["commercial_acurint"]
+        unavailability_reason:
+          $ref: '#/components/schemas/UnavailabilityReason'
+
+    UnavailabilityReason:
+      type: string
+      nullable: true
+      enum:
+        - egress_blocked
+        - connector_error
+        - credentials_invalid
+        - rate_limited
+        - timeout
+      description: |
+        If any connectors were unavailable, the primary reason. Null when all connectors
+        were reachable.
+
+    # -------------------------------------------------------------------------
+    # Connector schemas
+    # -------------------------------------------------------------------------
+
+    ConnectorListResponse:
+      type: object
+      required: [connectors]
+      properties:
+        connectors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConnectorInfo'
+
+    ConnectorInfo:
+      type: object
+      required: [id, name, category, status, credential_mode]
+      properties:
+        id:
+          type: string
+          description: Stable connector identifier.
+          example: commercial_lexisnexis
+        name:
+          type: string
+          example: "LexisNexis Risk Solutions"
+        category:
+          $ref: '#/components/schemas/SourceCategory'
+        description:
+          type: string
+          example: "Commercial identity and risk data covering US and international records."
+        status:
+          $ref: '#/components/schemas/ConnectorStatusEnum'
+        credential_mode:
+          type: string
+          enum: [intrace_managed, byok]
+          description: |
+            - `intrace_managed` — credentials provisioned and maintained by Intrace
+            - `byok` — bring your own key; credentials configured by your organization
+        egress:
+          type: array
+          description: Hostnames and ports this connector requires outbound access to.
+          items:
+            type: object
+            required: [host, port, protocol]
+            properties:
+              host:
+                type: string
+                example: "api.lexisnexis.com"
+              port:
+                type: integer
+                example: 443
+              protocol:
+                type: string
+                enum: [https, http, tcp]
+                example: https
+        last_checked_at:
+          type: string
+          format: date-time
+          example: "2026-02-19T14:20:00Z"
+        latency_ms:
+          type: integer
+          nullable: true
+          description: Round-trip latency in milliseconds from the last health check. Null if unreachable.
+          example: 142
+
+    ConnectorHealth:
+      type: object
+      required: [id, status, checked_at]
+      properties:
+        id:
+          type: string
+          example: commercial_lexisnexis
+        status:
+          $ref: '#/components/schemas/ConnectorStatusEnum'
+        checked_at:
+          type: string
+          format: date-time
+          example: "2026-02-19T14:23:00Z"
+        latency_ms:
+          type: integer
+          nullable: true
+          example: 142
+        error:
+          type: string
+          nullable: true
+          description: Error message if the connector is not reachable.
+          example: null
+
+    ConnectorStatusEnum:
+      type: string
+      enum: [reachable, unreachable, degraded, unknown]
+      description: |
+        - `reachable` — connector is responding normally
+        - `unreachable` — connector cannot be reached (egress blocked or service down)
+        - `degraded` — connector is responding but with elevated latency or partial errors
+        - `unknown` — health has not been checked recently
+
+    # -------------------------------------------------------------------------
+    # Audit schemas
+    # -------------------------------------------------------------------------
+
+    AuditLogResponse:
+      type: object
+      required: [records, total]
+      properties:
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditRecord'
+        total:
+          type: integer
+          description: Total number of records matching the filter (before pagination).
+          example: 1482
+        next_cursor:
+          type: string
+          nullable: true
+          description: Cursor to retrieve the next page. Null when no further pages exist.
+
+    AuditRecord:
+      type: object
+      required: [request_id, principal, organization_id, source_ip, legal_basis, logged_at]
+      properties:
+        request_id:
+          type: string
+          example: req_01JNQBC4X8Y2Z3A
+        principal:
+          $ref: '#/components/schemas/Principal'
+        organization_id:
+          type: string
+          example: org_treasury_ofac
+        source_ip:
+          type: string
+          example: "10.14.2.55"
+        legal_basis:
+          $ref: '#/components/schemas/LegalBasis'
+        requester_reference:
+          type: string
+          nullable: true
+          example: "CASE-2026-00412"
+        identifiers_queried:
+          type: integer
+          description: Number of identifiers submitted in this lookup.
+          example: 2
+        logged_at:
+          type: string
+          format: date-time
+          example: "2026-02-19T14:23:01Z"
+
+    Principal:
+      type: object
+      required: [type]
+      description: The authenticated identity that performed the lookup.
+      properties:
+        type:
+          $ref: '#/components/schemas/PrincipalType'
+        user_id:
+          type: string
+          nullable: true
+          description: Identity provider subject claim (`sub`). Present for user principals.
+          example: "u_treasury_jsmith"
+        user_email:
+          type: string
+          format: email
+          nullable: true
+          description: Identity provider email claim. Present for user principals.
+          example: "j.smith@treasury.gov"
+        idp_session_id:
+          type: string
+          nullable: true
+          description: Identity provider session identifier. Present for user principals.
+          example: "saml_sess_abc123"
+        api_key_id:
+          type: string
+          nullable: true
+          description: API key identifier. Present for service account principals.
+          example: "key_treasury_svc_01"
+        service_account_name:
+          type: string
+          nullable: true
+          description: Human-readable service account label. Present for service account principals.
+          example: "treasury-integration-prod"
+
+    PrincipalType:
+      type: string
+      enum: [user, service_account]
+      description: |
+        - `user` — authenticated via SAML/OIDC SSO. Audit record includes user identity.
+        - `service_account` — authenticated via API key. No individual user attributed.
+
+    # -------------------------------------------------------------------------
+    # Report schemas
+    # -------------------------------------------------------------------------
+
+    ReportVerification:
+      type: object
+      required: [request_id, verified, report_hash, checked_at]
+      properties:
+        request_id:
+          type: string
+          example: req_01JNQBC4X8Y2Z3A
+        verified:
+          type: boolean
+          description: True if the stored report hash matches the originally generated hash and the signature is valid.
+          example: true
+        report_hash:
+          type: string
+          description: The SHA-256 hash on record for this report.
+          example: "sha256:abc123def456..."
+        signed_at:
+          type: string
+          format: date-time
+          example: "2026-02-19T14:23:01Z"
+        checked_at:
+          type: string
+          format: date-time
+          example: "2026-02-19T15:00:00Z"
+        failure_reason:
+          type: string
+          nullable: true
+          description: Present only when `verified` is false. Describes why verification failed.
+          example: null
+
+    # -------------------------------------------------------------------------
+    # Analysis schemas
+    # -------------------------------------------------------------------------
+
+    AnalysisRequest:
+      type: object
+      required: [subject, analysis_type, options]
+      properties:
+        subject:
+          $ref: '#/components/schemas/AnalysisSubject'
+        analysis_type:
+          type: string
+          description: |
+            The analysis to run. Use `GET /analysis/types` to discover what is
+            available in this deployment. This field is an open string — new types
+            are added by Intrace without requiring a contract change.
+        parameters:
+          type: object
+          additionalProperties: true
+          description: |
+            Type-specific parameters. The accepted parameters for each analysis type
+            are documented at `GET /analysis/types/{type}`. Unknown parameters are
+            ignored. All parameters are optional unless noted in the type's schema.
+        options:
+          $ref: '#/components/schemas/AnalysisOptions'
+
+    AnalysisSubject:
+      type: object
+      required: [type]
+      description: The entity or set of entities the analysis runs against.
+      properties:
+        type:
+          type: string
+          description: |
+            The subject type. Currently `entity` is supported. Additional subject
+            types will be introduced as new analysis capabilities are released —
+            use `GET /analysis/types` to confirm what subject types each analysis
+            accepts.
+          example: entity
+        entity_id:
+          type: string
+          description: Required when `type` is `entity`. The engine entity ID to analyse.
+          example: ent_01JNQBC4X8Y2Z3B
+
+    AnalysisOptions:
+      type: object
+      required: [legal_basis]
+      properties:
+        legal_basis:
+          $ref: '#/components/schemas/LegalBasis'
+        requester_reference:
+          type: string
+          maxLength: 256
+          description: Optional caller-controlled reference recorded verbatim in the audit trail.
+          example: "CASE-2026-00412"
+
+    AnalysisResponse:
+      type: object
+      required: [analysis_id, analysis_type, status, subject, queried_at, audit]
+      properties:
+        analysis_id:
+          type: string
+          description: Unique identifier for this analysis. Use it to retrieve the result later.
+          example: ana_01JNQBC4X8Y2Z3D
+        analysis_type:
+          type: string
+          description: The analysis type that was run.
+        status:
+          type: string
+          enum: [complete, failed]
+          description: |
+            - `complete` — analysis ran successfully. `result` is populated.
+            - `failed` — analysis could not complete. `error` is populated.
+        subject:
+          $ref: '#/components/schemas/AnalysisSubject'
+        queried_at:
+          type: string
+          format: date-time
+          example: "2026-02-19T14:23:00Z"
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2026-02-19T14:23:04Z"
+        result:
+          $ref: '#/components/schemas/AnalysisResult'
+          nullable: true
+        error:
+          type: object
+          nullable: true
+          description: Present when `status` is `failed`.
+          properties:
+            code:
+              type: string
+              example: "analysis_failed"
+            message:
+              type: string
+              example: "Insufficient graph data to complete analysis."
+        audit:
+          $ref: '#/components/schemas/AuditRecord'
+
+    AnalysisResult:
+      type: object
+      required: [data]
+      description: |
+        The result envelope for a completed analysis. The `data` field contains
+        the type-specific output. Its structure is documented per analysis type
+        at `GET /analysis/types/{type}` and may evolve independently of this contract.
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+          description: Type-specific result payload. Structure varies by analysis type.
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          nullable: true
+          description: |
+            Overall confidence in the result, where applicable. Not all analysis
+            types produce a confidence score.
+          example: 0.84
+        coverage_note:
+          type: string
+          nullable: true
+          description: |
+            Human-readable note about data completeness, if the result may be
+            affected by connector unavailability or insufficient source data.
+          example: "One or more connectors were unavailable. Results may be incomplete."
+
+    AnalysisTypesResponse:
+      type: object
+      required: [types]
+      properties:
+        types:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalysisTypeInfo'
+
+    AnalysisTypeInfo:
+      type: object
+      required: [type, status, description]
+      properties:
+        type:
+          type: string
+          description: The analysis type identifier. Pass this as `analysis_type` in `POST /analysis`.
+        status:
+          $ref: '#/components/schemas/AnalysisTypeStatus'
+        description:
+          type: string
+          description: Human-readable description of what this analysis does.
+        subject_types:
+          type: array
+          items:
+            type: string
+          description: Subject types this analysis accepts (e.g. `entity`).
+          example: ["entity"]
+        parameters_schema_url:
+          type: string
+          description: URL to retrieve the full parameter schema for this type.
+          example: "/v1/analysis/types/network_centrality"
+
+    AnalysisTypeDetail:
+      type: object
+      required: [type, status, description]
+      properties:
+        type:
+          type: string
+        status:
+          $ref: '#/components/schemas/AnalysisTypeStatus'
+        description:
+          type: string
+        subject_types:
+          type: array
+          items:
+            type: string
+          example: ["entity"]
+        parameters:
+          type: object
+          additionalProperties: true
+          description: |
+            A JSON Schema object describing the parameters this analysis type accepts.
+            Use this to validate your `parameters` payload before submission.
+        result_description:
+          type: string
+          description: |
+            Narrative description of the `result.data` structure for this type.
+            The result schema is intentionally not enforced by the API contract —
+            it is documented here for reference only and may evolve as the
+            analysis type develops.
+
+    AnalysisTypeStatus:
+      type: string
+      enum: [available, beta, deprecated]
+      description: |
+        - `available` — fully supported and recommended for production use
+        - `beta` — available for use but the interface or result structure may change
+        - `deprecated` — will be removed in a future release; migrate to the replacement type indicated in the description
+
+    # -------------------------------------------------------------------------
+    # Error schema
+    # -------------------------------------------------------------------------
+
+    ApiError:
+      type: object
+      required: [error, request_id]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code.
+              example: "invalid_legal_basis"
+            message:
+              type: string
+              description: Human-readable explanation of the error.
+              example: "The provided legal_basis value is not recognized."
+            details:
+              type: array
+              description: Field-level validation errors, if applicable.
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    example: "options.legal_basis"
+                  issue:
+                    type: string
+                    example: "Must be one of: sanctions_screening, law_enforcement_investigation, ..."
+        request_id:
+          type: string
+          description: Include this in support requests.
+          example: req_01JNQBC4X8Y2Z3A
