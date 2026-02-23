@@ -118,4 +118,4 @@ After configuration, test SSO authentication:
 curl -H "Authorization: Bearer YOUR_JWT" https://your-hostname/v1/connectors
 ```
 
-A `200` response confirms authentication is working. A `401` with `"code": "token_invalid"` indicates a claims or issuer configuration mismatch — check `OIDC_ISSUER_URL` and `OIDC_AUDIENCE`.
+A `200` response confirms authentication is working. A `401` with `"code": "token_invalid"` indicates a claims or issuer configuration mismatch. Check `OIDC_ISSUER_URL` and `OIDC_AUDIENCE`.

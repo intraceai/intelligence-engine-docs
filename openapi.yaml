@@ -3,8 +3,8 @@ info:
   title: Intrace Intelligence Engine API
   version: 1.0.0
   description: |
-    The Intrace Intelligence Engine API resolves digital identifiers — email addresses,
-    phone numbers, usernames, IP addresses, and more — into enriched entity profiles
+    The Intrace Intelligence Engine API resolves digital identifiers (email addresses,
+    phone numbers, usernames, IP addresses, and more) into enriched entity profiles
     backed by multi-source intelligence.
 
     Every response includes full source attribution, a tamper-evident report hash,
@@ -55,7 +55,7 @@ paths:
         The catalog of available types is managed by Intrace and updated independently
         of the API contract. New types appear here when released. Types may carry a
         `status` of `available`, `beta`, or `deprecated`. Do not hard-code type names
-        in your integration — use this endpoint to discover what is available at runtime.
+        in your integration; use this endpoint to discover what is available at runtime.
       tags: [Analysis]
       responses:
         '200':
@@ -76,7 +76,7 @@ paths:
       description: |
         Returns the accepted parameters and expected result structure for a specific
         analysis type. The `parameters` field is a JSON Schema object describing what
-        the type accepts. The result schema is descriptive — the `result.data` field
+        the type accepts. The result schema is descriptive. The `result.data` field
         in analysis responses is not constrained by the API contract and may evolve
         as the analysis type is developed.
       tags: [Analysis]
@@ -655,8 +655,8 @@ components:
       description: |
         Controls how broadly the engine queries intelligence connectors.
 
-        - `standard` — queries primary connectors. Fastest response, covers most use cases.
-        - `deep` — queries all available connectors including secondary and derived sources.
+        - `standard`: queries primary connectors. Fastest response, covers most use cases.
+        - `deep`: queries all available connectors including secondary and derived sources.
           Increases latency and connector usage; use when standard coverage is insufficient.
 
     LegalBasis:
@@ -737,9 +737,9 @@ components:
       type: string
       enum: [resolved, ambiguous, no_match]
       description: |
-        - `resolved` — all identifiers map to a single entity with sufficient confidence.
-        - `ambiguous` — identifiers match multiple candidate entities. All are returned ranked by confidence. The caller should review and select the correct match.
-        - `no_match` — no entity could be associated with any of the provided identifiers.
+        - `resolved`: all identifiers map to a single entity with sufficient confidence.
+        - `ambiguous`: identifiers match multiple candidate entities. All are returned ranked by confidence. The caller should review and select the correct match.
+        - `no_match`: no entity could be associated with any of the provided identifiers.
 
     Entity:
       type: object
@@ -970,11 +970,11 @@ components:
       type: string
       enum: [critical, high, medium, low, informational]
       description: |
-        - `critical` — requires immediate action (e.g. confirmed sanctions hit)
-        - `high` — strong indicator of significant risk
-        - `medium` — notable signal warranting review
-        - `low` — weak or unverified signal
-        - `informational` — contextual data with no direct risk implication
+        - `critical`: requires immediate action (e.g. confirmed sanctions hit)
+        - `high`: strong indicator of significant risk
+        - `medium`: notable signal warranting review
+        - `low`: weak or unverified signal
+        - `informational`: contextual data with no direct risk implication
 
     Traceability:
       type: object
@@ -1125,8 +1125,8 @@ components:
           type: string
           enum: [intrace_managed, byok]
           description: |
-            - `intrace_managed` — credentials provisioned and maintained by Intrace
-            - `byok` — bring your own key; credentials configured by your organization
+            - `intrace_managed`: credentials provisioned and maintained by Intrace
+            - `byok`: bring your own key; credentials configured by your organization
         egress:
           type: array
           description: Hostnames and ports this connector requires outbound access to.
@@ -1181,10 +1181,10 @@ components:
       type: string
       enum: [reachable, unreachable, degraded, unknown]
       description: |
-        - `reachable` — connector is responding normally
-        - `unreachable` — connector cannot be reached (egress blocked or service down)
-        - `degraded` — connector is responding but with elevated latency or partial errors
-        - `unknown` — health has not been checked recently
+        - `reachable`: connector is responding normally
+        - `unreachable`: connector cannot be reached (egress blocked or service down)
+        - `degraded`: connector is responding but with elevated latency or partial errors
+        - `unknown`: health has not been checked recently
 
     # -------------------------------------------------------------------------
     # Audit schemas
@@ -1275,8 +1275,8 @@ components:
       type: string
       enum: [user, service_account]
       description: |
-        - `user` — authenticated via SAML/OIDC SSO. Audit record includes user identity.
-        - `service_account` — authenticated via API key. No individual user attributed.
+        - `user`: authenticated via SAML/OIDC SSO. Audit record includes user identity.
+        - `service_account`: authenticated via API key. No individual user attributed.
 
     # -------------------------------------------------------------------------
     # Report schemas
@@ -1325,7 +1325,7 @@ components:
           type: string
           description: |
             The analysis to run. Use `GET /analysis/types` to discover what is
-            available in this deployment. This field is an open string — new types
+            available in this deployment. This field is an open string; new types
             are added by Intrace without requiring a contract change.
         parameters:
           type: object
@@ -1346,8 +1346,8 @@ components:
           type: string
           description: |
             The subject type. Currently `entity` is supported. Additional subject
-            types will be introduced as new analysis capabilities are released —
-            use `GET /analysis/types` to confirm what subject types each analysis
+            types will be introduced as new analysis capabilities are released.
+            Use `GET /analysis/types` to confirm what subject types each analysis
             accepts.
           example: entity
         entity_id:
@@ -1382,8 +1382,8 @@ components:
           type: string
           enum: [complete, failed]
           description: |
-            - `complete` — analysis ran successfully. `result` is populated.
-            - `failed` — analysis could not complete. `error` is populated.
+            - `complete`: analysis ran successfully. `result` is populated.
+            - `failed`: analysis could not complete. `error` is populated.
         subject:
           $ref: '#/components/schemas/AnalysisSubject'
         queried_at:
@@ -1499,17 +1499,17 @@ components:
           type: string
           description: |
             Narrative description of the `result.data` structure for this type.
-            The result schema is intentionally not enforced by the API contract —
-            it is documented here for reference only and may evolve as the
+            The result schema is intentionally not enforced by the API contract.
+            It is documented here for reference only and may evolve as the
             analysis type develops.
 
     AnalysisTypeStatus:
       type: string
       enum: [available, beta, deprecated]
       description: |
-        - `available` — fully supported and recommended for production use
-        - `beta` — available for use but the interface or result structure may change
-        - `deprecated` — will be removed in a future release; migrate to the replacement type indicated in the description
+        - `available`: fully supported and recommended for production use
+        - `beta`: available for use but the interface or result structure may change
+        - `deprecated`: will be removed in a future release; migrate to the replacement type indicated in the description
 
     # -------------------------------------------------------------------------
     # Error schema

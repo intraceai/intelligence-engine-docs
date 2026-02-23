@@ -1,9 +1,9 @@
 ---
 title: Analysis
-description: Running intelligence analysis against entities — interface mechanics and how to discover capabilities
+description: Running intelligence analysis against entities: interface mechanics and how to discover capabilities
 ---
 
-The Analysis API runs intelligence analysis against entities resolved by the lookup engine. It is built around a capability-discovery model: the catalog of available analysis types is managed by Intrace and evolves independently of this API contract. New analysis capabilities appear in the catalog when released — no integration changes required.
+The Analysis API runs intelligence analysis against entities resolved by the lookup engine. It is built around a capability-discovery model: the catalog of available analysis types is managed by Intrace and evolves independently of this API contract. New analysis capabilities appear in the catalog when released; no integration changes required.
 
 ## How it works
 
@@ -116,7 +116,7 @@ POST /v1/analysis
 
 ### Subject
 
-The `subject` identifies what to run the analysis against. Currently `type: entity` is supported, requiring an `entity_id` from a prior lookup. Additional subject types will be introduced alongside new analysis capabilities — consult `GET /analysis/types/{type}` for what each type accepts.
+The `subject` identifies what to run the analysis against. Currently `type: entity` is supported, requiring an `entity_id` from a prior lookup. Additional subject types will be introduced alongside new analysis capabilities. Consult `GET /analysis/types/{type}` for what each type accepts.
 
 ### Parameters
 
@@ -150,7 +150,7 @@ Pass parameters as a flat object. Unrecognised keys are ignored. If you omit the
 }
 ```
 
-The outer envelope — `analysis_id`, `status`, `subject`, timestamps, `audit` — is stable and typed. The `result.data` object is type-specific and documented per type at `GET /analysis/types/{type}`.
+The outer envelope (`analysis_id`, `status`, `subject`, timestamps, `audit`) is stable and typed. The `result.data` object is type-specific and documented per type at `GET /analysis/types/{type}`.
 
 `confidence` is present when the analysis type produces one. Not all types do. `coverage_note` is set when the result may be incomplete due to connector availability or insufficient source data.
 

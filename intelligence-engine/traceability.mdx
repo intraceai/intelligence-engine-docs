@@ -1,78 +1,58 @@
 ---
 title: Traceability & Chain of Custody
-description: How source attribution, report signing, and audit logging work
+description: How source attribution, lineage tracking, and export provenance work
 ---
 
-Every lookup result produced by the Intelligence Engine is fully traceable. This page explains the three layers of traceability and how to use them in compliance and evidentiary contexts.
+Every entity and record is fully traceable. This page explains the three layers of traceability and how to use them in compliance and evidentiary contexts.
 
 ## 1. Source attribution
 
-Every data point in an entity profile carries a `sources` array referencing the specific connectors that produced it. The `traceability.data_lineage` map in each entity links JSON path expressions to source IDs:
+Every record carries provenance that records where it came from and how it was created. The lineage system tracks:
 
-```json
-"data_lineage": {
-  "profile.names[0].value": ["src_001", "src_004"],
-  "profile.phones[0].value": ["src_002"]
-}
-```
+- **Origin**: Where the record originated (`origin_feature`, `origin_source_id`, `source_details`).
+- **Transforms**: Each transform that produced or enriched the record, including `transform_name`, `connector_name`, and `executed_by`. This links each piece of data to the connector that produced it.
 
-This means that for any field in the profile, you can trace exactly which source produced it, when that source was queried, and the engine's confidence in that source's data.
+Use `GET /api/provenance/{id}/lineage` for a single record's origin, transforms, transitions, and updates. Use `GET /api/provenance/{id}/full-lineage` for the complete ancestry chain from root to current record, including a unified timeline of all events.
 
-The full source list is in `traceability.sources`, which includes source name, category, retrieval timestamp, and per-source confidence.
+## 2. Lineage chain and integrity
 
-## 2. Report signing
+The full lineage response includes:
 
-When a lookup completes, the engine computes a canonical SHA-256 hash of the full JSON response and signs it using the deployment's private key (RSA-PSS). This produces:
+- **`chain`**: Ordered list of records from root (oldest ancestor) to current. Each step contains its events (origin, transforms, transitions, updates, deduplication, merges) in chronological order.
+- **`timeline`**: Unified list of all events across the chain, sorted by timestamp.
+- **`merge_history`**: Records of merge operations that contributed to this entity.
 
-- **`report_hash`** — the hash of the report at time of generation
-- **`report_signature`** — the cryptographic signature over the hash
-- **`signed_at`** — the UTC timestamp of signing
+## 3. Export provenance
 
-These values are embedded in the response and in the PDF export. They cannot be altered without invalidating the signature.
-
-### Verifying a report
-
-Use `GET /reports/{request_id}/verify` to confirm that a report has not been tampered with since it was generated:
-
-```json
-{
-  "request_id": "req_01JNQBC4X8Y2Z3A",
-  "verified": true,
-  "report_hash": "sha256:abc123def456...",
-  "signed_at": "2026-02-19T14:23:01Z",
-  "checked_at": "2026-02-19T15:00:00Z"
-}
-```
-
-If `verified` is `false`, `failure_reason` explains why. This endpoint is designed to be called by legal counsel, auditors, or opposing parties to confirm the integrity of a report submitted as evidence.
-
-## 3. Audit log
-
-Every query — regardless of outcome — produces an immutable audit record containing:
+PDF exports can include provenance metadata when `include_provenance` is enabled. The export records:
 
 | Field | Description |
 |-------|-------------|
-| `request_id` | Links the audit record to the lookup result |
-| `principal.type` | `user` (SAML/OIDC) or `service_account` (API key) |
-| `principal.user_email` | The authenticated analyst's email (user queries only) |
-| `principal.idp_session_id` | IdP session ID for correlation with your IdP's own logs |
-| `source_ip` | IP address of the requesting client |
-| `legal_basis` | The declared legal basis, verbatim |
-| `requester_reference` | Caller-supplied reference (e.g. case number), if provided |
-| `logged_at` | UTC timestamp of audit record creation |
+| `exported_at` | UTC timestamp when the export was generated |
+| `exported_by` | User ID who triggered the export |
+| `export_config` | The resolved export options |
+| `data_fingerprints` | SHA-256 hash of each section's data at export time |
+| `truncation_summary` | Counts when data was truncated |
 
-Audit records cannot be modified or deleted. Use `GET /audit` to query the log, with filters for date range, user, and legal basis.
+The fingerprints enable verification that the exported data matches what was in the report at the time of export. Recomputing the hash of the same data should yield the same fingerprint.
+
+## 4. Audit and accountability
+
+The lineage timeline attributes every event to a user or system:
+
+- **`created_by`** / **`created_by_name`**: Who created the record (origin events)
+- **`executed_by`** / **`executed_by_name`**: Who ran the transform
+- **`updated_by`** / **`updated_by_name`**: Who modified fields (update events)
+
+Field updates record `field_path`, `old_value`, `new_value`, and `source`. Transitions record when data moved between features with `from_feature`, `to_feature`, and `trigger_type`.
 
 ## PDF export
 
-`GET /reports/{request_id}/pdf` produces a signed PDF that includes:
+Report PDF exports can include:
 
-- Cover page with `request_id`, timestamp, legal basis, and requester reference
-- Full entity profile with per-field confidence scores
-- Source attribution table
-- Source coverage disclosure (which connectors were and were not available)
-- Data lineage appendix
-- Audit record
-- Report hash and signature for independent verification
+- Report content
+- Export provenance section (when `include_provenance` is true): exported_at, exported_by, export config
+- Dataset fingerprints: SHA-256 hashes for integrity verification
+- Truncation summary when data was paginated
 
-The PDF is suitable for submission as a supporting document in legal, regulatory, or law enforcement proceedings.
+The PDF is suitable for submission as a supporting document in legal, regulatory, or law enforcement proceedings. The fingerprints allow recipients to verify that the exported data has not been altered since the export was generated.

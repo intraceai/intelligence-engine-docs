@@ -32,15 +32,15 @@ The result is communicated via `resolution.status`:
 | `ambiguous` | Identifiers match more than one candidate entity. All candidates are returned ranked by `confidence`. The caller should review and select the correct match. |
 | `no_match` | No entity could be associated with any of the provided identifiers. |
 
-When `status` is `ambiguous`, the response contains multiple entries in the `entities` array, each with its own `confidence` score. Do not assume the first entry is correct — review each candidate.
+When `status` is `ambiguous`, the response contains multiple entries in the `entities` array, each with its own `confidence` score. Do not assume the first entry is correct; review each candidate.
 
 ## Confidence scores
 
 Confidence is expressed as a float between `0.0` and `1.0`. It appears at three levels:
 
-- **`resolution.confidence`** — how certain the engine is that the returned entities represent the queried identifiers
-- **`entity.confidence`** — how certain the engine is that a specific candidate entity matches (only meaningful when `status` is `ambiguous`)
-- **Per data-point confidence** — every name, email, phone, and address entry carries its own confidence score reflecting source quality and corroboration
+- **`resolution.confidence`**: how certain the engine is that the returned entities represent the queried identifiers
+- **`entity.confidence`**: how certain the engine is that a specific candidate entity matches (only meaningful when `status` is `ambiguous`)
+- **Per data-point confidence**: every name, email, phone, and address entry carries its own confidence score reflecting source quality and corroboration
 
 Confidence scores are produced by the engine's resolution model and reflect the strength and consistency of evidence across sources. They are not probabilities and should be interpreted qualitatively:
 

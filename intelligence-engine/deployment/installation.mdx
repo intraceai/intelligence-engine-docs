@@ -7,7 +7,6 @@ description: Step-by-step guide to deploying the Intelligence Engine on-premises
 
 - Review [System Requirements](/intelligence-engine/deployment/requirements)
 - Obtain your license key and container registry credentials from Intrace
-- Decide whether you are deploying with Docker Compose (single node) or Helm (Kubernetes)
 
 ## Docker Compose
 
@@ -60,48 +59,6 @@ curl -H "X-API-Key: your_api_key" https://your-hostname/v1/connectors
 ```
 
 Review the `status` field for each connector. Any connector with `"status": "unreachable"` requires a firewall egress rule. See [Connector Reference](/intelligence-engine/deployment/connectors) for the required hostnames and ports per connector.
-
----
-
-## Helm (Kubernetes)
-
-### 1. Add the Intrace Helm repository
-
-```bash
-helm repo add intrace https://charts.intrace.ai
-helm repo update
-```
-
-### 2. Create a values file
-
-```bash
-helm show values intrace/intelligence-engine > values.yaml
-```
-
-Edit `values.yaml` with your deployment-specific configuration. The required values are documented inline in the file.
-
-### 3. Create the license secret
-
-```bash
-kubectl create secret generic intrace-license \
-  --from-literal=license-key=YOUR_LICENSE_KEY \
-  --from-literal=deployment-id=YOUR_DEPLOYMENT_ID
-```
-
-### 4. Install the chart
-
-```bash
-helm install intelligence-engine intrace/intelligence-engine \
-  --namespace intelligence-engine \
-  --create-namespace \
-  --values values.yaml
-```
-
-### 5. Verify the rollout
-
-```bash
-kubectl rollout status deployment/intelligence-engine -n intelligence-engine
-```
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Legal Basis
-description: Required declaration for every lookup — what the values mean and when to use them
+description: Required declaration for every lookup: what the values mean and when to use them
 ---
 
 Every lookup request requires a `legal_basis` field. This is a required declaration of the operational or legal justification for the query. It is recorded immutably in the audit log and included in all PDF report exports.
@@ -59,9 +59,9 @@ Applicable for: corporate security teams, insider threat programs.
 
 ## How legal basis is used
 
-- **Audit records** — the `legal_basis` value appears in every audit record associated with the query, attributed to the authenticated user or service account.
-- **PDF reports** — the declared legal basis is printed on the cover page of every exported report.
-- **Filtering** — the `GET /audit` endpoint supports filtering by `legal_basis` to support compliance reporting.
+- **Audit records**: the `legal_basis` value appears in every audit record associated with the query, attributed to the authenticated user or service account.
+- **PDF reports**: the declared legal basis is printed on the cover page of every exported report.
+- **Filtering**: the `GET /audit` endpoint supports filtering by `legal_basis` to support compliance reporting.
 
 ## Important
 

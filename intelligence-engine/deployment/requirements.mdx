@@ -22,8 +22,6 @@ For high-availability deployments running multiple replicas behind a load balanc
 |------------|----------------|-------|
 | Docker Engine | 24.0 | Required for Docker Compose deployments |
 | Docker Compose | 2.20 | |
-| Kubernetes | 1.28 | Required for Helm deployments |
-| Helm | 3.12 | Required for Kubernetes deployments |
 
 The engine runs as a set of Linux containers. No additional runtime dependencies need to be installed on the host.
 
@@ -44,8 +42,8 @@ The engine exposes a single HTTPS port (default `443`) for API traffic. Your loa
 
 The engine requires outbound HTTPS access to:
 
-- **Intelligence connectors** — each connector requires access to specific external hostnames. See [Connector Reference](/intelligence-engine/deployment/connectors) for the full egress list per connector.
-- **Intrace license server** — `license.intrace.ai:443` — periodic license validation. The engine checks in at startup and then on a configurable interval. If the license server is unreachable at startup, the engine will not start.
+- **Intelligence connectors**: each connector requires access to specific external hostnames. See [Connector Reference](/intelligence-engine/deployment/connectors) for the full egress list per connector.
+- **Intrace license server**: `license.intrace.ai:443` for periodic license validation. The engine checks in at startup and then on a configurable interval. If the license server is unreachable at startup, the engine will not start.
 
 ### DNS
 
@@ -55,7 +53,7 @@ The deployment host must be able to resolve public DNS for all connector hostnam
 
 You must supply a valid TLS certificate for the engine's hostname. Self-signed certificates are supported for internal deployments but are not recommended in environments where the API is accessed by external systems.
 
-The engine does not terminate TLS itself — bring your own reverse proxy (nginx, Caddy, HAProxy, or your existing API gateway).
+The engine does not terminate TLS itself. Bring your own reverse proxy (nginx, Caddy, HAProxy, or your existing API gateway).
 
 ## Next step
 

@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "aspen",
+  "theme": "mint",
   "name": "Intrace Intelligence Engine",
   "openapi": "/openapi.yaml",
   "colors": {

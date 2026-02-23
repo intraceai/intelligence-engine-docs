@@ -3,7 +3,7 @@ title: Configuration
 description: Full reference for all environment variables and configuration options
 ---
 
-Configuration is supplied via environment variables, either in a `.env` file (Docker Compose) or as Kubernetes secrets and ConfigMaps (Helm). Sensitive values must never be committed to version control.
+Configuration is supplied via environment variables in a `.env` file. Sensitive values must never be committed to version control.
 
 ## License
 
@@ -59,14 +59,14 @@ The private key must be RSA-4096 minimum. Generate one with:
 openssl genrsa -out signing.key 4096
 ```
 
-Store the key as a Kubernetes secret or Docker secret — do not place it in the `.env` file in production.
+Store the key as a Docker secret. Do not place it in the `.env` file in production.
 
 ## Data retention
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `RESULT_RETENTION_DAYS` | No | How long to retain lookup results. Default: `365`. Set to `0` to disable retention (results are not retrievable after the initial response). |
-| `AUDIT_RETENTION_DAYS` | No | How long to retain audit records. Default: `2555` (7 years). Audit records cannot be set to `0` — they must be retained for the configured period. |
+| `AUDIT_RETENTION_DAYS` | No | How long to retain audit records. Default: `2555` (7 years). Audit records cannot be set to `0`; they must be retained for the configured period. |
 
 ## Rate limiting
 

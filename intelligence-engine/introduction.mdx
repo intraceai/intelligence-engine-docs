@@ -3,7 +3,7 @@ title: Introduction
 description: What the Intrace Intelligence Engine is and how to use it
 ---
 
-The Intrace Intelligence Engine resolves digital identifiers — email addresses, phone numbers, usernames, IP addresses, and more — into structured, multi-source entity profiles. It is designed for deployment in your organization's infrastructure and integrates with your existing identity provider.
+The Intrace Intelligence Engine resolves digital identifiers (email addresses, phone numbers, usernames, IP addresses, and more) into structured, multi-source entity profiles. It is designed for deployment in your organization's infrastructure and integrates with your existing identity provider.
 
 ## What it does
 
@@ -18,7 +18,7 @@ Every field in the profile links back to the source that produced it. Every quer
 
 ## How it is deployed
 
-The engine runs entirely within your organization's network. It is distributed as a container image and deployed via Docker Compose or Helm. It calls external intelligence connectors over your existing internet egress — no data leaves your network for processing, and no query results are stored by Intrace.
+The engine runs entirely within your organization's network. It is distributed as a container image and deployed via Docker Compose. It calls external intelligence connectors over your existing internet egress. No data leaves your network for processing, and no query results are stored by Intrace.
 
 ## Authentication
 
@@ -33,6 +33,6 @@ Both modes produce full audit records. SAML/OIDC is recommended for any context 
 
 ## Next steps
 
-- [Core concepts](/intelligence-engine/core-concepts) — understand entity resolution, confidence scores, and source coverage
-- [Deployment guide](/intelligence-engine/deployment/requirements) — system requirements and installation
-- [API reference](/intelligence-engine/api/lookup-post) — full endpoint documentation
+- [Core concepts](/intelligence-engine/core-concepts): understand entity resolution, confidence scores, and source coverage
+- [Deployment guide](/intelligence-engine/deployment/requirements): system requirements and installation
+- [API reference](/intelligence-engine/api/lookup-post): full endpoint documentation
