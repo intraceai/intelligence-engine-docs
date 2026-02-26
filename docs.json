@@ -44,14 +44,12 @@
               "intelligence-engine/deployment/requirements",
               "intelligence-engine/deployment/installation",
               "intelligence-engine/deployment/configuration",
-              "intelligence-engine/deployment/connectors",
               "intelligence-engine/deployment/identity-provider"
             ]
           },
           {
             "group": "COMPLIANCE",
             "pages": [
-              "intelligence-engine/compliance/legal-basis",
               "intelligence-engine/compliance/audit-log",
               "intelligence-engine/compliance/chain-of-custody"
             ]

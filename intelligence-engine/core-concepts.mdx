@@ -14,9 +14,11 @@ An identifier is a piece of data that may uniquely or partially identify a real-
 | `username` | Platform-agnostic username | Any |
 | `ip` | IPv4 or IPv6 address | Standard notation |
 | `domain` | Registered domain name | RFC 1035 |
-| `name` | Full or partial legal name | Any |
-| `social_handle` | Platform-specific handle (e.g. `@user`) | Any |
-| `crypto_address` | Blockchain wallet address | Chain-specific |
+| `name` | Full or partial name | Any |
+| `url` | Web URL for scraping or analysis | URL |
+| `address` | Physical or mailing address | Any |
+| `company_name` | Business or organization name | Any |
+| `social_url` | Direct URL to a social media profile | URL |
 
 You can submit multiple identifiers in a single request. The engine treats them as a combined signal and attempts to resolve them to a single entity.
 
@@ -40,15 +42,15 @@ Confidence is expressed as a float between `0.0` and `1.0`. It appears at three 
 
 - **`resolution.confidence`**: how certain the engine is that the returned entities represent the queried identifiers
 - **`entity.confidence`**: how certain the engine is that a specific candidate entity matches (only meaningful when `status` is `ambiguous`)
-- **Per data-point confidence**: every name, email, phone, and address entry carries its own confidence score reflecting source quality and corroboration
+- **Per data-point confidence**: every phone, address, social profile, and associate entry carries its own confidence score reflecting source quality and corroboration
 
 Confidence scores are produced by the engine's resolution model and reflect the strength and consistency of evidence across sources. They are not probabilities and should be interpreted qualitatively:
 
 | Range | Interpretation |
 |-------|---------------|
-| 0.90–1.0 | High confidence. Multiple independent sources agree. |
-| 0.70–0.89 | Moderate confidence. Some corroboration but gaps remain. |
-| 0.50–0.69 | Low confidence. Single source or conflicting signals. |
+| 0.90--1.0 | High confidence. Multiple independent sources agree. |
+| 0.70--0.89 | Moderate confidence. Some corroboration but gaps remain. |
+| 0.50--0.69 | Low confidence. Single source or conflicting signals. |
 | < 0.50 | Speculative. Treat with significant caution. |
 
 ## Source coverage and partial results
@@ -59,13 +61,13 @@ The `source_coverage` object in every response discloses which connectors were q
 
 ```json
 "source_coverage": {
-  "available": ["commercial_lexisnexis", "sanctions_ofac", "osint_shodan"],
-  "unavailable": ["commercial_acurint"],
+  "available": ["connector_001", "connector_002", "connector_003"],
+  "unavailable": ["connector_004"],
   "unavailability_reason": "egress_blocked"
 }
 ```
 
-This disclosure is also included in PDF report exports. In evidentiary or compliance contexts, the absence of a connector from the `available` list means that source was **not** checked for this query.
+This disclosure is also included in PDF report exports. The absence of a connector from the `available` list means that source was **not** checked for this query.
 
 Use `GET /connectors` to inspect connector status before running critical queries.
 
@@ -77,9 +79,3 @@ The `depth` option controls how broadly the engine queries sources:
 |-------|----------|
 | `standard` | Queries primary connectors. Covers the majority of use cases with the lowest latency. |
 | `deep` | Queries all available connectors including secondary and derived sources. Higher latency and connector usage. Use when standard coverage is insufficient. |
-
-## Legal basis
-
-Every query requires a `legal_basis` declaration. This value is recorded verbatim and immutably in the audit log and cannot be changed after submission.
-
-See [Legal Basis](/intelligence-engine/compliance/legal-basis) for the full list of accepted values and guidance on when to use each.

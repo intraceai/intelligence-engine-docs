@@ -8,12 +8,12 @@ All errors follow a consistent structure:
 ```json
 {
   "error": {
-    "code": "invalid_legal_basis",
-    "message": "The provided legal_basis value is not recognized.",
+    "code": "invalid_identifier_type",
+    "message": "The identifier type is not recognized.",
     "details": [
       {
-        "field": "options.legal_basis",
-        "issue": "Must be one of: sanctions_screening, law_enforcement_investigation, fraud_investigation, regulatory_compliance, due_diligence, internal_security"
+        "field": "identifiers[0].type",
+        "issue": "Must be one of: email, phone, username, ip, domain, name, url, address, company_name, social_url"
       }
     ]
   },
@@ -57,7 +57,6 @@ The authenticated principal does not have permission for the requested operation
 | Code | Cause | Resolution |
 |------|-------|------------|
 | `insufficient_scope` | The principal's role does not grant access to this endpoint. | Contact your administrator to review role assignments. |
-| `legal_basis_not_permitted` | The organization's policy restricts this `legal_basis` value for this principal. | Use a permitted legal basis or contact your administrator. |
 
 ---
 
@@ -75,7 +74,6 @@ The request is syntactically valid but cannot be processed as submitted.
 
 | Code | Cause | Resolution |
 |------|-------|------------|
-| `invalid_legal_basis` | The `legal_basis` value is not in the accepted enum. | Use one of the documented values. |
 | `invalid_identifier_type` | The `type` field of an identifier is not recognized. | Use a supported identifier type. |
 | `identifier_format_invalid` | An identifier value does not match the required format for its type (e.g. a phone number not in E.164 format). | Reformat the identifier. |
 | `no_identifiers` | The `identifiers` array is empty. | Provide at least one identifier. |

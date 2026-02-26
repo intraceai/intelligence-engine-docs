@@ -114,7 +114,7 @@ paths:
         `GET /analysis/types/{type}` to see what parameters each type accepts.
 
         Every analysis request is logged to the immutable audit trail with the
-        authenticated principal's identity and the declared legal basis.
+        authenticated principal's identity.
       tags: [Analysis]
       requestBody:
         required: true
@@ -130,8 +130,15 @@ paths:
                     type: entity
                     entity_id: "ent_01JNQBC4X8Y2Z3B"
                   analysis_type: "network_centrality"
+              with_reference:
+                summary: Request with a case reference
+                value:
+                  subject:
+                    type: entity
+                    entity_id: "ent_01JNQBC4X8Y2Z3B"
+                  analysis_type: "network_centrality"
                   options:
-                    legal_basis: law_enforcement_investigation
+                    requester_reference: "CASE-2026-00412"
       responses:
         '200':
           description: Analysis completed.
@@ -205,8 +212,8 @@ paths:
         merge all provided identifiers into a single entity. When resolution is
         ambiguous, all candidate entities are returned ranked by confidence.
 
-        Every call is logged immutably to the audit trail. The `legal_basis` field
-        is required and recorded verbatim.
+        Every call is logged immutably to the audit trail with the authenticated
+        principal's identity.
 
         If one or more intelligence connectors are unreachable (e.g. blocked by
         firewall egress rules), the response is still returned with the data collected
@@ -230,7 +237,6 @@ paths:
                       value: "+15551234567"
                   options:
                     depth: standard
-                    legal_basis: sanctions_screening
                     requester_reference: "CASE-2026-00412"
               username_lookup:
                 summary: Username lookup
@@ -240,7 +246,18 @@ paths:
                       value: "handle123"
                   options:
                     depth: deep
-                    legal_basis: law_enforcement_investigation
+              domain_lookup:
+                summary: Domain lookup
+                value:
+                  identifiers:
+                    - type: domain
+                      value: "example.com"
+              company_lookup:
+                summary: Company name lookup
+                value:
+                  identifiers:
+                    - type: company_name
+                      value: "Acme Corp"
       responses:
         '200':
           description: Lookup completed. Results may be partial if some connectors were unavailable.
@@ -324,7 +341,7 @@ paths:
           schema:
             type: string
           description: The connector identifier, as returned by `GET /connectors`.
-          example: commercial_lexisnexis
+          example: connector_001
       responses:
         '200':
           description: Connector health returned.
@@ -346,7 +363,7 @@ paths:
       description: |
         Returns an immutable, append-only log of all lookups performed by your
         organization. Records cannot be modified or deleted. Supports filtering
-        by date range, user, and legal basis.
+        by date range and user.
       tags: [Audit]
       parameters:
         - name: from
@@ -368,11 +385,6 @@ paths:
           schema:
             type: string
           description: Filter by the identity provider user ID.
-        - name: legal_basis
-          in: query
-          schema:
-            $ref: '#/components/schemas/LegalBasis'
-          description: Filter by legal basis.
         - name: limit
           in: query
           schema:
@@ -463,7 +475,7 @@ paths:
         hash on record matches the originally generated report, confirming the result
         has not been modified since it was produced.
 
-        Use this endpoint to establish chain of custody in legal or evidentiary contexts.
+        Use this endpoint to establish chain of custody in evidentiary contexts.
       tags: [Reports]
       parameters:
         - $ref: '#/components/parameters/RequestId'
@@ -579,7 +591,7 @@ components:
 
     LookupRequest:
       type: object
-      required: [identifiers, options]
+      required: [identifiers]
       properties:
         identifiers:
           type: array
@@ -605,6 +617,8 @@ components:
             - "+15551234567"
             - "handle123"
             - "192.0.2.1"
+            - "example.com"
+            - "https://linkedin.com/in/jdoe"
 
     IdentifierType:
       type: string
@@ -615,8 +629,10 @@ components:
         - ip
         - domain
         - name
-        - social_handle
-        - crypto_address
+        - url
+        - address
+        - company_name
+        - social_url
       description: |
         The type of identifier being submitted.
 
@@ -627,18 +643,17 @@ components:
         | `username` | Platform-agnostic username | Any |
         | `ip` | IPv4 or IPv6 address | RFC 791 / RFC 2460 |
         | `domain` | Registered domain name | RFC 1035 |
-        | `name` | Full or partial legal name | Any |
-        | `social_handle` | Platform-specific handle (e.g. `@user`) | Any |
-        | `crypto_address` | Blockchain wallet address | Chain-specific |
+        | `name` | Full or partial name (first/middle/last or combined) | Any |
+        | `url` | Web URL for scraping or analysis | URL |
+        | `address` | Physical/mailing address | Any |
+        | `company_name` | Business or organization name | Any |
+        | `social_url` | Direct URL to a social media profile | URL |
 
     LookupOptions:
       type: object
-      required: [legal_basis]
       properties:
         depth:
           $ref: '#/components/schemas/LookupDepth'
-        legal_basis:
-          $ref: '#/components/schemas/LegalBasis'
         requester_reference:
           type: string
           maxLength: 256
@@ -658,28 +673,6 @@ components:
         - `standard`: queries primary connectors. Fastest response, covers most use cases.
         - `deep`: queries all available connectors including secondary and derived sources.
           Increases latency and connector usage; use when standard coverage is insufficient.
-
-    LegalBasis:
-      type: string
-      enum:
-        - sanctions_screening
-        - law_enforcement_investigation
-        - fraud_investigation
-        - regulatory_compliance
-        - due_diligence
-        - internal_security
-      description: |
-        The legal or operational basis for this query. Required for every lookup.
-        Recorded immutably in the audit log. Choose the most specific applicable value.
-
-        | Value | Intended use |
-        |-------|-------------|
-        | `sanctions_screening` | Checking an entity against sanctions lists (OFAC, UN, EU) |
-        | `law_enforcement_investigation` | Active law enforcement investigation |
-        | `fraud_investigation` | Investigating suspected financial fraud or identity fraud |
-        | `regulatory_compliance` | AML, KYC, or other regulatory compliance obligations |
-        | `due_diligence` | Pre-transaction or onboarding due diligence |
-        | `internal_security` | Internal threat investigation or insider risk |
 
     # -------------------------------------------------------------------------
     # Response schemas
@@ -761,22 +754,27 @@ components:
         traceability:
           $ref: '#/components/schemas/Traceability'
 
+    # -------------------------------------------------------------------------
+    # Entity profile schemas — derived from nodes_types.py
+    # -------------------------------------------------------------------------
+
     EntityProfile:
       type: object
-      description: The enriched intelligence profile assembled for this entity.
+      description: |
+        The enriched intelligence profile assembled for this entity. Each section
+        corresponds to a category of data returned by the engine's connectors.
+        All sections are optional; presence depends on what connectors returned data.
       properties:
-        names:
-          type: array
-          items:
-            $ref: '#/components/schemas/NameEntry'
-        emails:
-          type: array
-          items:
-            $ref: '#/components/schemas/EmailEntry'
+        person:
+          $ref: '#/components/schemas/PersonEntry'
         phones:
           type: array
           items:
             $ref: '#/components/schemas/PhoneEntry'
+        emails:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailEntry'
         addresses:
           type: array
           items:
@@ -784,25 +782,64 @@ components:
         social_profiles:
           type: array
           items:
-            $ref: '#/components/schemas/SocialProfile'
+            $ref: '#/components/schemas/SocialProfileEntry'
+        organizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrganizationEntry'
+        network:
+          $ref: '#/components/schemas/NetworkSection'
+        credentials:
+          type: array
+          description: Credential and data leak records associated with this entity.
+          items:
+            $ref: '#/components/schemas/CredentialEntry'
         associates:
           type: array
-          description: Other entities with a detected relationship to this one.
+          description: Other individuals with a detected association to this entity.
           items:
-            $ref: '#/components/schemas/Associate'
-        risk_signals:
+            $ref: '#/components/schemas/AssociateEntry'
+        relatives:
           type: array
-          description: Flags and risk indicators detected across sources.
+          description: Family members linked to this entity.
           items:
-            $ref: '#/components/schemas/RiskSignal'
+            $ref: '#/components/schemas/RelativeEntry'
+        indicators:
+          $ref: '#/components/schemas/IndicatorsEntry'
+        geolocation:
+          type: array
+          description: Geographic coordinates associated with this entity.
+          items:
+            $ref: '#/components/schemas/GeolocationEntry'
+        web_results:
+          type: array
+          description: Web search results mentioning this entity.
+          items:
+            $ref: '#/components/schemas/WebResultEntry'
 
-    NameEntry:
+    PersonEntry:
       type: object
-      required: [value, confidence, sources]
+      description: Core identity fields for a resolved person. Based on PersonNode fields.
       properties:
-        value:
+        first_name:
+          type: string
+          example: "John"
+        middle_name:
+          type: string
+          example: "A"
+        last_name:
+          type: string
+          example: "Doe"
+        full_name:
           type: string
           example: "John A. Doe"
+        age:
+          type: integer
+          example: 42
+        dob:
+          type: string
+          description: Date of birth.
+          example: "1984-03-15"
         confidence:
           type: number
           format: float
@@ -811,16 +848,61 @@ components:
           example: 0.95
         sources:
           type: array
-          description: Source IDs that surfaced this value. References `traceability.sources[].id`.
+          description: Source IDs that produced these fields. References `traceability.sources[].id`.
           items:
             type: string
           example: ["src_001", "src_004"]
 
+    PhoneEntry:
+      type: object
+      description: Phone number record. Based on PhoneNumberNode fields.
+      required: [number, confidence, sources]
+      properties:
+        number:
+          type: string
+          description: Phone number (E.164 or local format as reported by source).
+          example: "+15551234567"
+        type:
+          type: string
+          description: Phone line type (mobile, landline, voip, etc.).
+          example: "mobile"
+        carrier:
+          type: string
+          example: "Verizon Wireless"
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 country code.
+          example: "US"
+        is_connected:
+          type: boolean
+          description: Whether the number was connected at time of query.
+          example: true
+        first_reported_date:
+          type: string
+          description: Earliest date this number was associated with the entity.
+          example: "2018-06-01"
+        last_reported_date:
+          type: string
+          description: Most recent date this number was associated with the entity.
+          example: "2026-01-15"
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.87
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_002"]
+
     EmailEntry:
       type: object
-      required: [value, confidence, sources]
+      description: Email address record. Based on EmailAddressNode fields.
+      required: [email, confidence, sources]
       properties:
-        value:
+        email:
           type: string
           format: email
           example: "john.doe@example.com"
@@ -836,46 +918,27 @@ components:
             type: string
           example: ["src_001"]
 
-    PhoneEntry:
-      type: object
-      required: [value, confidence, sources]
-      properties:
-        value:
-          type: string
-          description: E.164 formatted phone number.
-          example: "+15551234567"
-        confidence:
-          type: number
-          format: float
-          minimum: 0.0
-          maximum: 1.0
-          example: 0.87
-        sources:
-          type: array
-          items:
-            type: string
-          example: ["src_002"]
-
     AddressEntry:
       type: object
-      required: [confidence, sources]
+      description: Physical address record. Based on AddressNode fields.
+      required: [address, confidence, sources]
       properties:
-        street:
+        address:
           type: string
-          example: "123 Main St"
-        city:
-          type: string
-          example: "Washington"
-        state:
-          type: string
-          example: "DC"
-        postal_code:
-          type: string
-          example: "20001"
+          description: Full address as a single string.
+          example: "123 Main St, Springfield, IL 62704"
         country:
           type: string
           description: ISO 3166-1 alpha-2 country code.
           example: "US"
+        first_reported_date:
+          type: string
+          description: Earliest date this address was associated with the entity.
+          example: "2015-03-01"
+        last_reported_date:
+          type: string
+          description: Most recent date this address was associated with the entity.
+          example: "2026-01-10"
         confidence:
           type: number
           format: float
@@ -888,25 +951,53 @@ components:
             type: string
           example: ["src_003"]
 
-    SocialProfile:
+    SocialProfileEntry:
       type: object
+      description: |
+        Social media profile. Based on SocialProfileNode fields with platform-specific
+        extensions for Twitter, Instagram, LinkedIn, and Facebook.
       required: [platform, confidence, sources]
       properties:
         platform:
           type: string
-          description: The social platform or service.
-          example: "telegram"
-        handle:
+          description: The social platform name.
+          example: "twitter"
+        username:
           type: string
-          example: "@jdoe_real"
-        url:
+          example: "jdoe_real"
+        bio:
+          type: string
+          example: "Software engineer and open source contributor."
+        profile_url:
           type: string
           format: uri
-          example: "https://t.me/jdoe_real"
-        active:
+          example: "https://x.com/jdoe_real"
+        profile_photo:
+          type: string
+          format: uri
+          description: URL to the profile photo.
+        followers_count:
+          type: integer
+          example: 1240
+        following_count:
+          type: integer
+          example: 380
+        verified:
           type: boolean
-          description: Whether the profile was active at time of query.
-          example: true
+          example: false
+        joined_date:
+          type: string
+          description: When the account was created.
+          example: "2019-05-12"
+        extended:
+          type: object
+          additionalProperties: true
+          description: |
+            Platform-specific fields not covered by the common schema. Examples:
+            Twitter: `tweets_count`, `likes_count`, `website`.
+            LinkedIn: `headline`, `job_title`, `company`, `connections_count`, `industry`.
+            Instagram: `media_count`, `full_name`, `business_category`.
+            Facebook: `friends_count`, `education`, `work`.
         confidence:
           type: number
           format: float
@@ -919,21 +1010,251 @@ components:
             type: string
           example: ["src_002"]
 
-    Associate:
+    OrganizationEntry:
       type: object
-      required: [relationship, confidence, sources]
+      description: Organization or company record. Based on OrganizationNode fields.
+      required: [organization_name, confidence, sources]
       properties:
-        entity_id:
+        organization_name:
           type: string
-          description: Engine entity ID of the associate, if resolved.
-          example: "ent_01JNQBC4X8Y2Z3C"
-        relationship:
+          example: "Acme Corporation"
+        industry:
           type: string
-          description: Type of detected relationship.
-          example: "frequent_contact"
-        name:
+          example: "Technology"
+        domain:
           type: string
-          example: "Jane Smith"
+          example: "acme.com"
+        website:
+          type: string
+          format: uri
+          example: "https://acme.com"
+        employees:
+          type: string
+          description: Employee count or range as reported by source.
+          example: "500-1000"
+        founded_year:
+          type: integer
+          example: 2005
+        revenue:
+          type: string
+          description: Revenue figure or range as reported by source.
+          example: "$50M-$100M"
+        jurisdiction_code:
+          type: string
+          description: Jurisdiction of incorporation (e.g. `us_de` for Delaware).
+          example: "us_de"
+        company_number:
+          type: string
+          description: Official company registration number.
+          example: "5738291"
+        current_status:
+          type: string
+          description: Current corporate status.
+          example: "Active"
+        incorporation_date:
+          type: string
+          example: "2005-08-15"
+        registered_address_in_full:
+          type: string
+          example: "1209 Orange St, Wilmington, DE 19801"
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.90
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_006"]
+
+    NetworkSection:
+      type: object
+      description: |
+        Network intelligence section. Present when the lookup included IP, domain,
+        or URL identifiers. Based on DomainNode, IPAddressNode, SSLCertificateNode,
+        and ServiceNode fields.
+      properties:
+        domains:
+          type: array
+          description: Domain WHOIS and registration data.
+          items:
+            $ref: '#/components/schemas/DomainRecord'
+        ips:
+          type: array
+          description: IP address records.
+          items:
+            $ref: '#/components/schemas/IpRecord'
+        ssl_certificates:
+          type: array
+          description: SSL/TLS certificate records associated with the domain or IP.
+          items:
+            $ref: '#/components/schemas/SslCertificateRecord'
+        services:
+          type: array
+          description: Open ports and running services discovered on the target.
+          items:
+            $ref: '#/components/schemas/ServiceRecord'
+
+    DomainRecord:
+      type: object
+      description: Domain registration and WHOIS data. Based on DomainNode fields.
+      required: [domain, sources]
+      properties:
+        domain:
+          type: string
+          example: "example.com"
+        created_date:
+          type: string
+          example: "2003-08-15"
+        registrar:
+          type: string
+          example: "Example Registrar Inc."
+        nameservers:
+          type: string
+          description: Comma-separated nameserver list.
+          example: "ns1.example.com, ns2.example.com"
+        whois_server:
+          type: string
+          example: "whois.example-registrar.com"
+        status:
+          type: string
+          example: "clientTransferProhibited"
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_007"]
+
+    IpRecord:
+      type: object
+      description: IP address record. Based on IPAddressNode fields.
+      required: [ip, sources]
+      properties:
+        ip:
+          type: string
+          example: "192.0.2.1"
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_007"]
+
+    SslCertificateRecord:
+      type: object
+      description: SSL/TLS certificate data. Based on SSLCertificateNode fields.
+      required: [sources]
+      properties:
+        subject:
+          type: string
+          example: "CN=example.com"
+        issuer:
+          type: string
+          example: "CN=R3, O=Let's Encrypt, C=US"
+        fingerprint:
+          type: string
+          example: "A1:B2:C3:D4:E5:F6:..."
+        valid_from:
+          type: string
+          example: "2026-01-01T00:00:00Z"
+        valid_until:
+          type: string
+          example: "2026-04-01T00:00:00Z"
+        alt_names:
+          type: string
+          description: Subject alternative names (comma-separated).
+          example: "example.com, www.example.com"
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_007"]
+
+    ServiceRecord:
+      type: object
+      description: Open port / running service record. Based on PortNode and ServiceNode fields.
+      required: [port, sources]
+      properties:
+        port:
+          type: integer
+          example: 443
+        service:
+          type: string
+          example: "https"
+        protocol:
+          type: string
+          example: "tcp"
+        product:
+          type: string
+          example: "nginx"
+        version:
+          type: string
+          example: "1.25.3"
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_008"]
+
+    CredentialEntry:
+      type: object
+      description: |
+        Credential or data leak record. Based on CredentialNode and LeakedRecordNode fields.
+        Represents credentials found in breach databases or leak aggregators.
+      required: [sources]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email address found in the leak.
+          example: "john.doe@example.com"
+        username:
+          type: string
+          description: Username found in the leak.
+          example: "jdoe123"
+        password:
+          type: string
+          description: Plaintext password if available (redacted in some configurations).
+        hash:
+          type: string
+          description: Password hash if available.
+          example: "$2b$12$..."
+        source_name:
+          type: string
+          description: Name of the breach or leak database.
+          example: "Collection #1"
+        breach_date:
+          type: string
+          description: Date the breach occurred or was disclosed.
+          example: "2019-01-01"
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_009"]
+
+    AssociateEntry:
+      type: object
+      description: Associated individual. Based on AssociateNode fields.
+      required: [confidence, sources]
+      properties:
+        first_name:
+          type: string
+          example: "Jane"
+        middle_name:
+          type: string
+        last_name:
+          type: string
+          example: "Smith"
+        dob:
+          type: string
+          description: Date of birth.
+        is_deceased:
+          type: boolean
+        associate_of:
+          type: string
+          description: Name or identifier of the primary entity this person is associated with.
         confidence:
           type: number
           format: float
@@ -946,35 +1267,139 @@ components:
             type: string
           example: ["src_003"]
 
-    RiskSignal:
+    RelativeEntry:
       type: object
-      required: [type, severity, sources]
+      description: Family member record. Based on RelativeNode fields.
+      required: [confidence, sources]
       properties:
-        type:
+        first_name:
           type: string
-          description: Machine-readable risk signal type.
-          example: "sanctions_list_match"
-        severity:
-          $ref: '#/components/schemas/RiskSeverity'
-        detail:
+          example: "Robert"
+        middle_name:
           type: string
-          description: Human-readable description of the risk signal.
-          example: "OFAC SDN match: FULL NAME, DOB 1980-01-01, Designation: narcotics"
+        last_name:
+          type: string
+          example: "Doe"
+        dob:
+          type: string
+          description: Date of birth.
+        is_deceased:
+          type: boolean
+          example: false
+        relative_type:
+          type: string
+          description: Relationship type (e.g. parent, sibling, spouse).
+          example: "parent"
+        city:
+          type: string
+          example: "Springfield"
+        state:
+          type: string
+          example: "IL"
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.85
         sources:
           type: array
           items:
             type: string
-          example: ["src_005"]
+          example: ["src_003"]
 
-    RiskSeverity:
-      type: string
-      enum: [critical, high, medium, low, informational]
+    IndicatorsEntry:
+      type: object
       description: |
-        - `critical`: requires immediate action (e.g. confirmed sanctions hit)
-        - `high`: strong indicator of significant risk
-        - `medium`: notable signal warranting review
-        - `low`: weak or unverified signal
-        - `informational`: contextual data with no direct risk implication
+        Boolean indicator flags reflecting the presence of specific record types
+        for this entity. Based on IndicatorsNode fields.
+      properties:
+        has_bankruptcy_records:
+          type: boolean
+        has_business_records:
+          type: boolean
+        has_divorce_records:
+          type: boolean
+        has_domains_records:
+          type: boolean
+        has_evictions_records:
+          type: boolean
+        has_fein_records:
+          type: boolean
+        has_foreclosures_records:
+          type: boolean
+        has_judgment_records:
+          type: boolean
+        has_lien_records:
+          type: boolean
+        has_marriage_records:
+          type: boolean
+        has_professional_license_records:
+          type: boolean
+        has_property_records:
+          type: boolean
+        has_vehicle_registrations_records:
+          type: boolean
+        has_workplace_records:
+          type: boolean
+        has_dea_records:
+          type: boolean
+        has_debt_records:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_003"]
+
+    GeolocationEntry:
+      type: object
+      description: Geographic coordinate record. Based on GPSCoordinateNode fields.
+      required: [latitude, longitude, sources]
+      properties:
+        latitude:
+          type: number
+          format: double
+          example: 39.7817
+        longitude:
+          type: number
+          format: double
+          example: -89.6501
+        title:
+          type: string
+          description: Human-readable label for this location.
+          example: "Springfield, IL"
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_003"]
+
+    WebResultEntry:
+      type: object
+      description: Web search result. Based on WebsiteNode fields.
+      required: [title, url, sources]
+      properties:
+        title:
+          type: string
+          example: "John Doe - Professional Profile"
+        url:
+          type: string
+          format: uri
+          example: "https://example.com/profiles/jdoe"
+        snippet:
+          type: string
+          description: Text snippet from the page mentioning the entity.
+          example: "John Doe is a software engineer based in Springfield..."
+        sources:
+          type: array
+          items:
+            type: string
+          example: ["src_010"]
+
+    # -------------------------------------------------------------------------
+    # Traceability schemas
+    # -------------------------------------------------------------------------
 
     Traceability:
       type: object
@@ -1005,15 +1430,15 @@ components:
           type: object
           description: |
             Maps each data point in the profile to the source IDs that produced it.
-            Keys are JSON path expressions (e.g. `profile.names[0].value`).
+            Keys are JSON path expressions (e.g. `profile.person.full_name`).
             Values are arrays of source IDs from `sources[].id`.
           additionalProperties:
             type: array
             items:
               type: string
           example:
-            "profile.names[0].value": ["src_001", "src_004"]
-            "profile.phones[0].value": ["src_002"]
+            "profile.person.full_name": ["src_001", "src_004"]
+            "profile.phones[0].number": ["src_002"]
 
     SourceReference:
       type: object
@@ -1026,7 +1451,7 @@ components:
         name:
           type: string
           description: Human-readable source name.
-          example: "LexisNexis Risk Solutions"
+          example: "Person Data Provider"
         category:
           $ref: '#/components/schemas/SourceCategory'
         retrieved_at:
@@ -1045,14 +1470,29 @@ components:
     SourceCategory:
       type: string
       enum:
-        - commercial_data_broker
-        - sanctions_list
-        - open_source_intelligence
+        - person_data
+        - network_intelligence
         - social_media
+        - business_data
+        - leak_database
+        - web_search
         - dark_web
         - public_records
         - derived
-      description: Broad category describing the nature of the intelligence source.
+      description: |
+        Broad category describing the nature of the intelligence source.
+
+        | Category | Covers |
+        |----------|--------|
+        | `person_data` | Person search, identity enrichment, data broker connectors |
+        | `network_intelligence` | IP, domain, DNS, SSL, port scanning connectors |
+        | `social_media` | Social media profile scrapers and enrichment |
+        | `business_data` | Company search, corporate registry, business enrichment |
+        | `leak_database` | Credential and data breach aggregators |
+        | `web_search` | Web search engine connectors |
+        | `dark_web` | Dark web and .onion site crawlers |
+        | `public_records` | Government registries and public record databases |
+        | `derived` | Data synthesized or inferred by the engine from multiple sources |
 
     SourceCoverage:
       type: object
@@ -1067,13 +1507,13 @@ components:
           description: Connector IDs that were reachable and queried.
           items:
             type: string
-          example: ["commercial_lexisnexis", "osint_shodan", "sanctions_ofac"]
+          example: ["connector_001", "connector_002", "connector_003"]
         unavailable:
           type: array
           description: Connector IDs that could not be reached during this query.
           items:
             type: string
-          example: ["commercial_acurint"]
+          example: ["connector_004"]
         unavailability_reason:
           $ref: '#/components/schemas/UnavailabilityReason'
 
@@ -1110,15 +1550,15 @@ components:
         id:
           type: string
           description: Stable connector identifier.
-          example: commercial_lexisnexis
+          example: connector_001
         name:
           type: string
-          example: "LexisNexis Risk Solutions"
+          example: "Person Data Provider"
         category:
           $ref: '#/components/schemas/SourceCategory'
         description:
           type: string
-          example: "Commercial identity and risk data covering US and international records."
+          example: "Person identity enrichment covering US and international records."
         status:
           $ref: '#/components/schemas/ConnectorStatusEnum'
         credential_mode:
@@ -1136,7 +1576,7 @@ components:
             properties:
               host:
                 type: string
-                example: "api.lexisnexis.com"
+                example: "api.provider.example.com"
               port:
                 type: integer
                 example: 443
@@ -1160,7 +1600,7 @@ components:
       properties:
         id:
           type: string
-          example: commercial_lexisnexis
+          example: connector_001
         status:
           $ref: '#/components/schemas/ConnectorStatusEnum'
         checked_at:
@@ -1209,7 +1649,7 @@ components:
 
     AuditRecord:
       type: object
-      required: [request_id, principal, organization_id, source_ip, legal_basis, logged_at]
+      required: [request_id, principal, organization_id, source_ip, logged_at]
       properties:
         request_id:
           type: string
@@ -1218,12 +1658,10 @@ components:
           $ref: '#/components/schemas/Principal'
         organization_id:
           type: string
-          example: org_treasury_ofac
+          example: org_example_001
         source_ip:
           type: string
           example: "10.14.2.55"
-        legal_basis:
-          $ref: '#/components/schemas/LegalBasis'
         requester_reference:
           type: string
           nullable: true
@@ -1248,13 +1686,13 @@ components:
           type: string
           nullable: true
           description: Identity provider subject claim (`sub`). Present for user principals.
-          example: "u_treasury_jsmith"
+          example: "u_analyst_jdoe"
         user_email:
           type: string
           format: email
           nullable: true
           description: Identity provider email claim. Present for user principals.
-          example: "j.smith@treasury.gov"
+          example: "analyst@example.com"
         idp_session_id:
           type: string
           nullable: true
@@ -1264,12 +1702,12 @@ components:
           type: string
           nullable: true
           description: API key identifier. Present for service account principals.
-          example: "key_treasury_svc_01"
+          example: "key_svc_01"
         service_account_name:
           type: string
           nullable: true
           description: Human-readable service account label. Present for service account principals.
-          example: "treasury-integration-prod"
+          example: "integration-prod"
 
     PrincipalType:
       type: string
@@ -1317,7 +1755,7 @@ components:
 
     AnalysisRequest:
       type: object
-      required: [subject, analysis_type, options]
+      required: [subject, analysis_type]
       properties:
         subject:
           $ref: '#/components/schemas/AnalysisSubject'
@@ -1357,10 +1795,7 @@ components:
 
     AnalysisOptions:
       type: object
-      required: [legal_basis]
       properties:
-        legal_basis:
-          $ref: '#/components/schemas/LegalBasis'
         requester_reference:
           type: string
           maxLength: 256
@@ -1526,11 +1961,11 @@ components:
             code:
               type: string
               description: Machine-readable error code.
-              example: "invalid_legal_basis"
+              example: "invalid_request"
             message:
               type: string
               description: Human-readable explanation of the error.
-              example: "The provided legal_basis value is not recognized."
+              example: "The request body is missing required fields."
             details:
               type: array
               description: Field-level validation errors, if applicable.
@@ -1539,10 +1974,10 @@ components:
                 properties:
                   field:
                     type: string
-                    example: "options.legal_basis"
+                    example: "identifiers[0].type"
                   issue:
                     type: string
-                    example: "Must be one of: sanctions_screening, law_enforcement_investigation, ..."
+                    example: "Must be one of: email, phone, username, ip, domain, name, url, address, company_name, social_url"
         request_id:
           type: string
           description: Include this in support requests.

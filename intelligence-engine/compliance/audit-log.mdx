@@ -12,15 +12,14 @@ Every query submitted to the Intelligence Engine, regardless of whether it retur
   "request_id": "req_01JNQBC4X8Y2Z3A",
   "principal": {
     "type": "user",
-    "user_id": "u_treasury_jsmith",
-    "user_email": "j.smith@treasury.gov",
+    "user_id": "u_analyst_jdoe",
+    "user_email": "analyst@example.com",
     "idp_session_id": "saml_sess_abc123",
     "api_key_id": null,
     "service_account_name": null
   },
-  "organization_id": "org_treasury_ofac",
+  "organization_id": "org_example_001",
   "source_ip": "10.14.2.55",
-  "legal_basis": "sanctions_screening",
   "requester_reference": "CASE-2026-00412",
   "identifiers_queried": 2,
   "logged_at": "2026-02-19T14:23:01Z"
@@ -50,11 +49,7 @@ curl "https://your-hostname/v1/audit?from=2026-01-01T00:00:00Z&to=2026-02-01T00:
   -H "X-API-Key: your_api_key"
 
 # Queries by a specific user
-curl "https://your-hostname/v1/audit?user_id=u_treasury_jsmith" \
-  -H "X-API-Key: your_api_key"
-
-# Queries with a specific legal basis
-curl "https://your-hostname/v1/audit?legal_basis=sanctions_screening" \
+curl "https://your-hostname/v1/audit?user_id=u_analyst_jdoe" \
   -H "X-API-Key: your_api_key"
 ```
 
