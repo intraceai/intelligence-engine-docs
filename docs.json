@@ -55,8 +55,7 @@
             "group": "REFERENCE",
             "pages": [
               "intelligence-engine/reference/errors",
-              "intelligence-engine/reference/rate-limits",
-              "intelligence-engine/reference/changelog"
+              "intelligence-engine/reference/rate-limits"
             ]
           }
         ]
