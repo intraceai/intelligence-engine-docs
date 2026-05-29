@@ -1,0 +1,23 @@
+---
+title: Streaming
+description: Server-sent event support for live job progress
+---
+
+Each capability exposes a streaming creation endpoint:
+
+```http
+POST /v1/web-search/stream
+POST /v1/pii-expansion/stream
+POST /v1/social-profile-match/stream
+```
+
+The response content type is `text/event-stream`. The API emits typed server-sent events for job creation, progress, items, partial results, final results, errors, and heartbeat comments.
+
+Use the `X-Job-Id` response header to reconnect to the job stream URL:
+
+```http
+GET /v1/social-profile-match/jobs/{job_id}/stream
+Last-Event-ID: 2
+```
+
+Reconnect stream endpoints are operationally supported but intentionally hidden from the generated public OpenAPI schema.

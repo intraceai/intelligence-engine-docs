@@ -1,38 +1,40 @@
 ---
 title: Introduction
-description: What the Intrace Intelligence Engine is and how to use it
+description: Customer-facing guide to the deployed Intrace Intelligence API
 ---
 
-The Intrace Intelligence Engine resolves digital identifiers (email addresses, phone numbers, usernames, IP addresses, and more) into structured, multi-source entity profiles. It is designed for deployment in your organization's infrastructure and integrates with your existing identity provider.
+The Intrace Intelligence API is an API-first OSINT service for customer intelligence workflows. It exposes three capabilities:
 
-## What it does
+- **Web search** for normalized web, news, and supported public social/adverse-media hits.
+- **PII expansion** for expanding known identifiers into identity candidates and related sanitized profile signals.
+- **Social profile match** for finding and scoring candidate social profiles against corroborating hints and natural-language activity criteria.
 
-Submit one or more identifiers in a single API call. The engine:
+All capability responses are normalized, deduplicated, and shaped for API consumption. Web/adverse-media results include `resultUrl` so investigators can review the underlying page; PII expansion and social profile match results focus on normalized identity/profile signals and sanitized supporting context.
 
-1. Queries all configured intelligence connectors in parallel
-2. Resolves the identifiers to one or more candidate entities
-3. Assembles a unified profile with full source attribution
-4. Returns the result with a tamper-evident signature and an immutable audit record
+## Base URL
 
-Every field in the profile links back to the source that produced it. Every query is logged with the authenticated user's identity.
+The production Intelligence API endpoint is:
 
-## How it is deployed
+```http
+https://api.ie.intrace.ai/
+```
 
-The engine runs entirely within your organization's network. It is distributed as a container image and deployed via Docker Compose. It calls external intelligence connectors over your existing internet egress. No data leaves your network for processing, and no query results are stored by Intrace.
+Capability endpoints are served under `/v1`:
 
-## Authentication
+```http
+POST https://api.ie.intrace.ai/v1/web-search
+POST https://api.ie.intrace.ai/v1/pii-expansion
+POST https://api.ie.intrace.ai/v1/social-profile-match
+```
 
-The engine supports two authentication modes:
+Operational health endpoints are exposed at `https://api.ie.intrace.ai/healthz` and `https://api.ie.intrace.ai/readyz`.
 
-| Mode | Use case | Audit attribution |
-|------|----------|-------------------|
-| SAML/OIDC Bearer token | Human analysts querying via your IdP | Individual user (`user_id`, `user_email`) |
-| API key | Automated integrations and service accounts | Service account name and key ID |
+## Access patterns
 
-Both modes produce full audit records. SAML/OIDC is recommended for any context where individual accountability is required.
+Each capability supports the same three patterns:
 
-## Next steps
+1. **Inline REST**: `POST /v1/<capability>` with `responseMode: "sync"`.
+2. **Async jobs**: `POST /v1/<capability>` with `responseMode: "async"`, then poll the returned `resultUrl`.
+3. **Server-sent events**: `POST /v1/<capability>/stream` for progress and result events.
 
-- [Core concepts](/intelligence-engine/core-concepts): understand entity resolution, confidence scores, and source coverage
-- [Deployment guide](/intelligence-engine/deployment/requirements): system requirements and installation
-- [API reference](/intelligence-engine/api/lookup-post): full endpoint documentation
+See the API Reference for exact request and response schemas. The reference is generated from the implemented API contract.

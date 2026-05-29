@@ -1,0 +1,36 @@
+---
+title: Jobs and pagination
+description: How async capability jobs work
+---
+
+Every capability creates a persisted job. Inline calls return a final result only if the job completes before the inline timeout; otherwise the API returns a job envelope with `202 Accepted`.
+
+All `POST` and `POST /stream` responses include:
+
+```http
+X-Job-Id: job_...
+```
+
+A job envelope contains `jobId`, `capability`, `status`, timestamps, progress, summary, result, error, warnings, `resultUrl`, and `streamUrl`.
+
+## Lifecycle
+
+Jobs move through these statuses:
+
+- `queued`
+- `running`
+- `completed`
+- `failed`
+- `expired`
+
+## Result lookup
+
+Use the capability-specific job endpoint returned in `resultUrl`:
+
+```http
+GET /v1/web-search/jobs/{job_id}?limit=25&cursor=...
+GET /v1/pii-expansion/jobs/{job_id}?limit=25&cursor=...
+GET /v1/social-profile-match/jobs/{job_id}?limit=25&cursor=...
+```
+
+When complete, `result` contains one page of normalized items. Preserve `nextCursor` exactly as returned; it is opaque.

@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Intrace Intelligence Engine",
+  "name": "Intrace Intelligence API",
   "openapi": "/openapi.yaml",
   "colors": {
     "primary": "#363636",
@@ -31,33 +31,24 @@
         "tab": "Documentation",
         "groups": [
           {
-            "group": "OVERVIEW",
+            "group": "START HERE",
             "pages": [
               "intelligence-engine/introduction",
-              "intelligence-engine/core-concepts",
-              "intelligence-engine/traceability"
+              "intelligence-engine/authentication",
+              "intelligence-engine/capabilities"
+            ]
+          },
+          {
+            "group": "WORKFLOWS",
+            "pages": [
+              "intelligence-engine/jobs",
+              "intelligence-engine/streaming"
             ]
           },
           {
             "group": "DEPLOYMENT",
             "pages": [
-              "intelligence-engine/deployment/requirements",
-              "intelligence-engine/deployment/installation",
-              "intelligence-engine/deployment/configuration",
-              "intelligence-engine/deployment/identity-provider"
-            ]
-          },
-          {
-            "group": "COMPLIANCE",
-            "pages": [
-              "intelligence-engine/compliance/audit-log",
-              "intelligence-engine/compliance/chain-of-custody"
-            ]
-          },
-          {
-            "group": "ANALYSIS",
-            "pages": [
-              "intelligence-engine/analysis"
+              "intelligence-engine/deployment/configuration"
             ]
           },
           {
@@ -74,40 +65,34 @@
         "tab": "API Reference",
         "groups": [
           {
-            "group": "LOOKUP",
+            "group": "WEB SEARCH",
             "pages": [
-              "intelligence-engine/api/lookup-post",
-              "intelligence-engine/api/lookup-get"
+              "intelligence-engine/api/web-search-run",
+              "intelligence-engine/api/web-search-stream",
+              "intelligence-engine/api/web-search-job"
             ]
           },
           {
-            "group": "ANALYSIS",
+            "group": "PII EXPANSION",
             "pages": [
-              "intelligence-engine/api/analysis-types-list",
-              "intelligence-engine/api/analysis-types-get",
-              "intelligence-engine/api/analysis-submit",
-              "intelligence-engine/api/analysis-get"
+              "intelligence-engine/api/pii-expansion-run",
+              "intelligence-engine/api/pii-expansion-stream",
+              "intelligence-engine/api/pii-expansion-job"
             ]
           },
           {
-            "group": "CONNECTORS",
+            "group": "SOCIAL PROFILE MATCH",
             "pages": [
-              "intelligence-engine/api/connectors-list",
-              "intelligence-engine/api/connectors-health"
+              "intelligence-engine/api/social-profile-match-run",
+              "intelligence-engine/api/social-profile-match-stream",
+              "intelligence-engine/api/social-profile-match-job"
             ]
           },
           {
-            "group": "AUDIT",
+            "group": "SYSTEM",
             "pages": [
-              "intelligence-engine/api/audit-list",
-              "intelligence-engine/api/audit-get"
-            ]
-          },
-          {
-            "group": "REPORTS",
-            "pages": [
-              "intelligence-engine/api/reports-pdf",
-              "intelligence-engine/api/reports-verify"
+              "intelligence-engine/api/healthz",
+              "intelligence-engine/api/readyz"
             ]
           }
         ]

@@ -1,0 +1,44 @@
+---
+title: Authentication
+description: How to authenticate requests to the Intelligence API
+---
+
+The production API is available at `https://api.ie.intrace.ai/`. Authenticated endpoints accept a provisioned API key in either header form.
+
+Primary form:
+
+```http
+X-API-Key: intrace_live_...
+```
+
+Bearer form:
+
+```http
+Authorization: Bearer intrace_live_...
+```
+
+The capability endpoints require authentication. `/healthz` and `/readyz` are operational endpoints and are not authenticated in the OpenAPI contract.
+
+## Error responses
+
+Missing or invalid keys return the standard error envelope:
+
+```json
+{
+  "error": {
+    "code": "missing_api_key",
+    "message": "An API key is required",
+    "retryable": false
+  }
+}
+```
+
+```json
+{
+  "error": {
+    "code": "invalid_api_key",
+    "message": "The supplied API key is invalid",
+    "retryable": false
+  }
+}
+```
