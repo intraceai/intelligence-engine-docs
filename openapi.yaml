@@ -1,694 +1,79 @@
 {
-  "openapi": "3.1.0",
-  "info": {
-    "title": "intelligence-api",
-    "summary": "Deployable API-first intelligence service for web search, PII expansion, and social profile matching.",
-    "description": "API-first OSINT service for customer intelligence workflows.\n\nAuthentication: send the provisioned API key as `X-API-Key: <key>` or `Authorization: Bearer <key>`.\n\nAll capability responses return normalized, deduplicated, connector-agnostic outputs. Provider provenance\nand connector-specific identifiers are intentionally excluded from public result payloads. Raw source URLs are\nexcluded except for web/adverse-media hits, where `resultUrl` intentionally exposes the full page URL.\n\nEach capability supports inline execution, async job lookup, and server-sent event streaming.",
-    "version": "0.1.0"
-  },
-  "servers": [
-    {
-      "url": "https://api.ie.intrace.ai",
-      "description": "Production Intelligence API"
-    }
-  ],
-  "paths": {
-    "/v1/web-search": {
-      "post": {
-        "tags": [
-          "web-search"
-        ],
-        "summary": "Run web/adverse-media search",
-        "description": "Create a web-search job and wait for an inline result when `responseMode` is `sync`. If the job does not finish before the inline timeout, or when `responseMode` is `async`, the API returns a persisted job envelope. Every response includes `X-Job-Id` for later lookup.",
-        "operationId": "run_web_search_v1_web_search_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WebSearchRunRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Normalized search hits when completed inline, otherwise a job envelope.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/WebSearchResult"
-                    },
-                    {
-                      "$ref": "#/components/schemas/JobEnvelope_WebSearchResult_"
-                    }
-                  ],
-                  "title": "Response Run Web Search V1 Web Search Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerApiKey": []
-          },
-          {
-            "ApiKeyAuth": []
-          }
-        ]
-      }
-    },
-    "/v1/web-search/stream": {
-      "post": {
-        "tags": [
-          "web-search"
-        ],
-        "summary": "Create and stream a web/adverse-media job",
-        "description": "Create a persisted web-search job and immediately stream typed server-sent events until completion. Use the `X-Job-Id` response header to reconnect at `GET /v1/web-search/jobs/{job_id}/stream` with `Last-Event-ID`.",
-        "operationId": "stream_web_search_v1_web_search_stream_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WebSearchRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              },
-              "text/event-stream": {}
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerApiKey": []
-          },
-          {
-            "ApiKeyAuth": []
-          }
-        ]
-      }
-    },
-    "/v1/web-search/jobs/{job_id}": {
-      "get": {
-        "tags": [
-          "web-search"
-        ],
-        "summary": "Read a web/adverse-media job",
-        "description": "Read the persisted job envelope for one web-search run. When the job has completed, the `result` field contains a paginated page of normalized items controlled by the `limit` and `cursor` query parameters.",
-        "operationId": "get_web_search_job_v1_web_search_jobs__job_id__get",
-        "security": [
-          {
-            "BearerApiKey": []
-          },
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "job_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Job Id"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 100,
-              "minimum": 1,
-              "default": 50,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Cursor"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Persisted job state with an optional paginated result page.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JobEnvelope_WebSearchResult_"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/pii-expansion": {
-      "post": {
-        "tags": [
-          "pii-expansion"
-        ],
-        "summary": "Run PII expansion",
-        "description": "Create a PII-expansion job and wait for an inline result when `responseMode` is `sync`. If the job does not finish before the inline timeout, or when `responseMode` is `async`, the API returns a persisted job envelope. Every response includes `X-Job-Id` for later lookup.",
-        "operationId": "run_pii_expansion_v1_pii_expansion_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PiiExpansionRunRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Normalized identity and related social-candidate results when completed inline, otherwise a job envelope.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/PiiExpansionResult"
-                    },
-                    {
-                      "$ref": "#/components/schemas/JobEnvelope_PiiExpansionResult_"
-                    }
-                  ],
-                  "title": "Response Run Pii Expansion V1 Pii Expansion Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerApiKey": []
-          },
-          {
-            "ApiKeyAuth": []
-          }
-        ]
-      }
-    },
-    "/v1/pii-expansion/stream": {
-      "post": {
-        "tags": [
-          "pii-expansion"
-        ],
-        "summary": "Create and stream a PII expansion job",
-        "description": "Create a persisted PII-expansion job and immediately stream typed server-sent events until completion. Use the `X-Job-Id` response header to reconnect at `GET /v1/pii-expansion/jobs/{job_id}/stream` with `Last-Event-ID`.",
-        "operationId": "stream_pii_expansion_v1_pii_expansion_stream_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PiiExpansionRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              },
-              "text/event-stream": {}
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerApiKey": []
-          },
-          {
-            "ApiKeyAuth": []
-          }
-        ]
-      }
-    },
-    "/v1/pii-expansion/jobs/{job_id}": {
-      "get": {
-        "tags": [
-          "pii-expansion"
-        ],
-        "summary": "Read a PII expansion job",
-        "description": "Read the persisted job envelope for one PII-expansion run. When the job has completed, the `result` field contains a paginated page of normalized items controlled by the `limit` and `cursor` query parameters.",
-        "operationId": "get_pii_expansion_job_v1_pii_expansion_jobs__job_id__get",
-        "security": [
-          {
-            "BearerApiKey": []
-          },
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "job_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Job Id"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 25,
-              "minimum": 1,
-              "default": 25,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Cursor"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Persisted job state with an optional paginated result page.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JobEnvelope_PiiExpansionResult_"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/social-profile-match": {
-      "post": {
-        "tags": [
-          "social-profile-match"
-        ],
-        "summary": "Run social profile match analysis",
-        "description": "Create a social-profile-match job and wait for an inline result when `responseMode` is `sync`. If the job does not finish before the inline timeout, or when `responseMode` is `async`, the API returns a persisted job envelope. Every response includes `X-Job-Id` for later lookup.",
-        "operationId": "run_social_profile_match_v1_social_profile_match_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SocialMatchRunRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Normalized scored candidate profiles when completed inline, otherwise a job envelope.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/SocialMatchResult"
-                    },
-                    {
-                      "$ref": "#/components/schemas/JobEnvelope_SocialMatchResult_"
-                    }
-                  ],
-                  "title": "Response Run Social Profile Match V1 Social Profile Match Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerApiKey": []
-          },
-          {
-            "ApiKeyAuth": []
-          }
-        ]
-      }
-    },
-    "/v1/social-profile-match/stream": {
-      "post": {
-        "tags": [
-          "social-profile-match"
-        ],
-        "summary": "Create and stream a social profile match job",
-        "description": "Create a persisted social-profile-match job and immediately stream typed server-sent events until completion. Use the `X-Job-Id` response header to reconnect at `GET /v1/social-profile-match/jobs/{job_id}/stream` with `Last-Event-ID`.",
-        "operationId": "stream_social_profile_match_v1_social_profile_match_stream_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SocialMatchRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              },
-              "text/event-stream": {}
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerApiKey": []
-          },
-          {
-            "ApiKeyAuth": []
-          }
-        ]
-      }
-    },
-    "/v1/social-profile-match/jobs/{job_id}": {
-      "get": {
-        "tags": [
-          "social-profile-match"
-        ],
-        "summary": "Read a social profile match job",
-        "description": "Read the persisted job envelope for one social-profile-match run. When the job has completed, the `result` field contains a paginated page of normalized items controlled by the `limit` and `cursor` query parameters.",
-        "operationId": "get_social_profile_match_job_v1_social_profile_match_jobs__job_id__get",
-        "security": [
-          {
-            "BearerApiKey": []
-          },
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "job_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Job Id"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 25,
-              "minimum": 1,
-              "default": 25,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Cursor"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Persisted job state with an optional paginated result page.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JobEnvelope_SocialMatchResult_"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/healthz": {
-      "get": {
-        "tags": [
-          "system"
-        ],
-        "summary": "Service liveness check",
-        "operationId": "healthz_healthz_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceStatusResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/readyz": {
-      "get": {
-        "tags": [
-          "system"
-        ],
-        "summary": "Service readiness check",
-        "operationId": "readyz_readyz_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceStatusResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
   "components": {
     "schemas": {
       "ApiError": {
+        "additionalProperties": false,
+        "description": "Standard API error payload.",
         "properties": {
           "code": {
-            "type": "string",
             "minLength": 1,
-            "title": "Code"
+            "title": "Code",
+            "type": "string"
           },
           "message": {
-            "type": "string",
             "minLength": 1,
-            "title": "Message"
+            "title": "Message",
+            "type": "string"
           },
           "retryable": {
-            "type": "boolean",
+            "default": false,
             "title": "Retryable",
-            "default": false
+            "type": "boolean"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "code",
           "message"
         ],
         "title": "ApiError",
-        "description": "Standard API error payload."
+        "type": "object"
       },
       "ApiWarning": {
+        "additionalProperties": false,
+        "description": "Non-fatal warning returned alongside results or job state.",
         "properties": {
           "code": {
-            "type": "string",
             "minLength": 1,
-            "title": "Code"
+            "title": "Code",
+            "type": "string"
           },
           "message": {
-            "type": "string",
             "minLength": 1,
-            "title": "Message"
+            "title": "Message",
+            "type": "string"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "code",
           "message"
         ],
         "title": "ApiWarning",
-        "description": "Non-fatal warning returned alongside results or job state."
+        "type": "object"
       },
       "Capability": {
-        "type": "string",
         "enum": [
           "web_search",
           "pii_expansion",
           "social_match"
         ],
-        "title": "Capability"
+        "title": "Capability",
+        "type": "string"
       },
       "ConfidenceCategory": {
-        "type": "string",
         "enum": [
           "likely",
           "uncertain"
         ],
-        "title": "ConfidenceCategory"
+        "title": "ConfidenceCategory",
+        "type": "string"
       },
       "ExpansionDepth": {
-        "type": "string",
         "enum": [
           "standard",
           "deep"
         ],
-        "title": "ExpansionDepth"
+        "title": "ExpansionDepth",
+        "type": "string"
       },
       "HTTPValidationError": {
         "properties": {
@@ -696,48 +81,24 @@
             "items": {
               "$ref": "#/components/schemas/ValidationError"
             },
-            "type": "array",
-            "title": "Detail"
+            "title": "Detail",
+            "type": "array"
           }
         },
-        "type": "object",
-        "title": "HTTPValidationError"
+        "title": "HTTPValidationError",
+        "type": "object"
       },
       "JobEnvelope_PiiExpansionResult_": {
+        "additionalProperties": false,
         "properties": {
-          "jobId": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Jobid"
-          },
           "capability": {
             "$ref": "#/components/schemas/Capability"
-          },
-          "status": {
-            "$ref": "#/components/schemas/JobStatus"
-          },
-          "submittedAt": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Submittedat"
-          },
-          "startedAt": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Startedat"
           },
           "completedAt": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "type": "string"
               },
               {
                 "type": "null"
@@ -745,11 +106,21 @@
             ],
             "title": "Completedat"
           },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "expiresAt": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "type": "string"
               },
               {
                 "type": "null"
@@ -757,20 +128,15 @@
             ],
             "title": "Expiresat"
           },
+          "jobId": {
+            "minLength": 1,
+            "title": "Jobid",
+            "type": "string"
+          },
           "progress": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/JobProgress"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "summary": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/JobSummary"
               },
               {
                 "type": "null"
@@ -787,23 +153,6 @@
               }
             ]
           },
-          "error": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ApiError"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "warnings": {
-            "items": {
-              "$ref": "#/components/schemas/ApiWarning"
-            },
-            "type": "array",
-            "title": "Warnings"
-          },
           "resultUrl": {
             "anyOf": [
               {
@@ -815,6 +164,21 @@
             ],
             "title": "Resulturl"
           },
+          "startedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
           "streamUrl": {
             "anyOf": [
               {
@@ -825,53 +189,50 @@
               }
             ],
             "title": "Streamurl"
+          },
+          "submittedAt": {
+            "format": "date-time",
+            "title": "Submittedat",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/ApiWarning"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "jobId",
           "capability",
           "status",
           "submittedAt"
         ],
-        "title": "JobEnvelope[PiiExpansionResult]"
+        "title": "JobEnvelope[PiiExpansionResult]",
+        "type": "object"
       },
       "JobEnvelope_SocialMatchResult_": {
+        "additionalProperties": false,
         "properties": {
-          "jobId": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Jobid"
-          },
           "capability": {
             "$ref": "#/components/schemas/Capability"
-          },
-          "status": {
-            "$ref": "#/components/schemas/JobStatus"
-          },
-          "submittedAt": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Submittedat"
-          },
-          "startedAt": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Startedat"
           },
           "completedAt": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "type": "string"
               },
               {
                 "type": "null"
@@ -879,11 +240,21 @@
             ],
             "title": "Completedat"
           },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "expiresAt": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "type": "string"
               },
               {
                 "type": "null"
@@ -891,20 +262,15 @@
             ],
             "title": "Expiresat"
           },
+          "jobId": {
+            "minLength": 1,
+            "title": "Jobid",
+            "type": "string"
+          },
           "progress": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/JobProgress"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "summary": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/JobSummary"
               },
               {
                 "type": "null"
@@ -921,23 +287,6 @@
               }
             ]
           },
-          "error": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ApiError"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "warnings": {
-            "items": {
-              "$ref": "#/components/schemas/ApiWarning"
-            },
-            "type": "array",
-            "title": "Warnings"
-          },
           "resultUrl": {
             "anyOf": [
               {
@@ -949,6 +298,21 @@
             ],
             "title": "Resulturl"
           },
+          "startedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
           "streamUrl": {
             "anyOf": [
               {
@@ -959,53 +323,50 @@
               }
             ],
             "title": "Streamurl"
+          },
+          "submittedAt": {
+            "format": "date-time",
+            "title": "Submittedat",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/ApiWarning"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "jobId",
           "capability",
           "status",
           "submittedAt"
         ],
-        "title": "JobEnvelope[SocialMatchResult]"
+        "title": "JobEnvelope[SocialMatchResult]",
+        "type": "object"
       },
       "JobEnvelope_WebSearchResult_": {
+        "additionalProperties": false,
         "properties": {
-          "jobId": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Jobid"
-          },
           "capability": {
             "$ref": "#/components/schemas/Capability"
-          },
-          "status": {
-            "$ref": "#/components/schemas/JobStatus"
-          },
-          "submittedAt": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Submittedat"
-          },
-          "startedAt": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Startedat"
           },
           "completedAt": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "type": "string"
               },
               {
                 "type": "null"
@@ -1013,11 +374,21 @@
             ],
             "title": "Completedat"
           },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "expiresAt": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "type": "string"
               },
               {
                 "type": "null"
@@ -1025,20 +396,15 @@
             ],
             "title": "Expiresat"
           },
+          "jobId": {
+            "minLength": 1,
+            "title": "Jobid",
+            "type": "string"
+          },
           "progress": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/JobProgress"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "summary": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/JobSummary"
               },
               {
                 "type": "null"
@@ -1055,23 +421,6 @@
               }
             ]
           },
-          "error": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ApiError"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "warnings": {
-            "items": {
-              "$ref": "#/components/schemas/ApiWarning"
-            },
-            "type": "array",
-            "title": "Warnings"
-          },
           "resultUrl": {
             "anyOf": [
               {
@@ -1083,6 +432,21 @@
             ],
             "title": "Resulturl"
           },
+          "startedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
           "streamUrl": {
             "anyOf": [
               {
@@ -1093,42 +457,48 @@
               }
             ],
             "title": "Streamurl"
+          },
+          "submittedAt": {
+            "format": "date-time",
+            "title": "Submittedat",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/ApiWarning"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "jobId",
           "capability",
           "status",
           "submittedAt"
         ],
-        "title": "JobEnvelope[WebSearchResult]"
+        "title": "JobEnvelope[WebSearchResult]",
+        "type": "object"
       },
       "JobProgress": {
+        "additionalProperties": false,
+        "description": "Progress metadata for long-running jobs.",
         "properties": {
-          "stage": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Stage"
-          },
           "completedSteps": {
-            "type": "integer",
+            "default": 0,
             "minimum": 0.0,
             "title": "Completedsteps",
-            "default": 0
-          },
-          "totalSteps": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Totalsteps"
+            "type": "integer"
           },
           "message": {
             "anyOf": [
@@ -1140,18 +510,32 @@
               }
             ],
             "title": "Message"
+          },
+          "stage": {
+            "minLength": 1,
+            "title": "Stage",
+            "type": "string"
+          },
+          "totalSteps": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Totalsteps"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "stage"
         ],
         "title": "JobProgress",
-        "description": "Progress metadata for long-running jobs."
+        "type": "object"
       },
       "JobStatus": {
-        "type": "string",
         "enum": [
           "queued",
           "running",
@@ -1159,80 +543,62 @@
           "failed",
           "expired"
         ],
-        "title": "JobStatus"
+        "title": "JobStatus",
+        "type": "string"
       },
       "JobSummary": {
+        "additionalProperties": false,
+        "description": "Summary counters for a completed or running job.",
         "properties": {
           "itemsFound": {
-            "type": "integer",
+            "default": 0,
             "minimum": 0.0,
             "title": "Itemsfound",
-            "default": 0
+            "type": "integer"
           },
           "itemsReturned": {
-            "type": "integer",
+            "default": 0,
             "minimum": 0.0,
             "title": "Itemsreturned",
-            "default": 0
-          },
-          "connectorsAttempted": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Connectorsattempted",
-            "default": 0
-          },
-          "connectorsSucceeded": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Connectorssucceeded",
-            "default": 0
-          },
-          "connectorsFailed": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Connectorsfailed",
-            "default": 0
+            "type": "integer"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "title": "JobSummary",
-        "description": "Summary counters for a completed or running job."
+        "type": "object"
       },
       "MatchCriterionRecord": {
+        "additionalProperties": false,
+        "description": "Per-criterion scoring or corroboration detail.",
         "properties": {
           "criterion": {
             "$ref": "#/components/schemas/MatchCriterionType"
           },
           "matched": {
-            "type": "boolean",
-            "title": "Matched"
+            "title": "Matched",
+            "type": "boolean"
           },
           "rationale": {
-            "type": "string",
             "minLength": 1,
-            "title": "Rationale"
+            "title": "Rationale",
+            "type": "string"
           },
           "scoreContribution": {
-            "type": "number",
+            "default": 0.0,
             "maximum": 1.0,
             "minimum": -1.0,
             "title": "Scorecontribution",
-            "default": 0.0
+            "type": "number"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "criterion",
           "matched",
           "rationale"
         ],
         "title": "MatchCriterionRecord",
-        "description": "Per-criterion scoring or corroboration detail."
+        "type": "object"
       },
       "MatchCriterionType": {
-        "type": "string",
         "enum": [
           "direct_url",
           "username",
@@ -1245,30 +611,30 @@
           "bio",
           "activity"
         ],
-        "title": "MatchCriterionType"
+        "title": "MatchCriterionType",
+        "type": "string"
       },
       "MatchedInputReference": {
+        "additionalProperties": false,
+        "description": "User input that contributed to a normalized item match.",
         "properties": {
           "inputType": {
             "$ref": "#/components/schemas/MatchedInputType"
           },
           "value": {
-            "type": "string",
             "minLength": 1,
-            "title": "Value"
+            "title": "Value",
+            "type": "string"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "inputType",
           "value"
         ],
         "title": "MatchedInputReference",
-        "description": "User input that contributed to a normalized item match."
+        "type": "object"
       },
       "MatchedInputType": {
-        "type": "string",
         "enum": [
           "name",
           "alias",
@@ -1286,72 +652,118 @@
           "seed_url",
           "date_of_birth"
         ],
-        "title": "MatchedInputType"
+        "title": "MatchedInputType",
+        "type": "string"
       },
       "NaturalLanguageCriterionMatch": {
+        "additionalProperties": false,
+        "description": "Matched natural-language criterion for one scraped item.",
         "properties": {
           "criterion": {
-            "type": "string",
             "minLength": 1,
-            "title": "Criterion"
+            "title": "Criterion",
+            "type": "string"
           },
           "rationale": {
-            "type": "string",
             "minLength": 1,
-            "title": "Rationale"
+            "title": "Rationale",
+            "type": "string"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "criterion",
           "rationale"
         ],
         "title": "NaturalLanguageCriterionMatch",
-        "description": "Matched natural-language criterion for one scraped item."
+        "type": "object"
       },
       "PiiExpansionItem": {
+        "additionalProperties": false,
+        "description": "Normalized identity-candidate output for PII expansion.",
         "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Id"
+          "addresses": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Addresses",
+            "type": "array"
           },
-          "type": {
-            "type": "string",
-            "const": "identity_candidate",
-            "title": "Type",
-            "default": "identity_candidate"
-          },
-          "label": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Label"
-          },
-          "summary": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Summary"
+          "associates": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Associates",
+            "type": "array"
           },
           "confidenceCategory": {
             "$ref": "#/components/schemas/ConfidenceCategory"
+          },
+          "emails": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Emails",
+            "type": "array"
+          },
+          "fullName": {
+            "minLength": 1,
+            "title": "Fullname",
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
           },
           "matchRationale": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Matchrationale"
+            "title": "Matchrationale",
+            "type": "array"
           },
           "matchedInputs": {
             "items": {
               "$ref": "#/components/schemas/MatchedInputReference"
             },
-            "type": "array",
-            "title": "Matchedinputs"
+            "title": "Matchedinputs",
+            "type": "array"
           },
           "normalizedAttributes": {
-            "$ref": "#/components/schemas/SanitizedNormalizedAttributes"
+            "$ref": "#/components/schemas/NormalizedAttributes"
+          },
+          "organizations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Organizations",
+            "type": "array"
+          },
+          "phones": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Phones",
+            "type": "array"
+          },
+          "relatives": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Relatives",
+            "type": "array"
+          },
+          "riskFlags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Riskflags",
+            "type": "array"
           },
           "safeMetadata": {
             "additionalProperties": {
@@ -1360,13 +772,13 @@
                   "type": "string"
                 },
                 {
+                  "type": "boolean"
+                },
+                {
                   "type": "integer"
                 },
                 {
                   "type": "number"
-                },
-                {
-                  "type": "boolean"
                 },
                 {
                   "items": {
@@ -1375,13 +787,13 @@
                         "type": "string"
                       },
                       {
+                        "type": "boolean"
+                      },
+                      {
                         "type": "integer"
                       },
                       {
                         "type": "number"
-                      },
-                      {
-                        "type": "boolean"
                       },
                       {
                         "type": "null"
@@ -1395,73 +807,28 @@
                 }
               ]
             },
-            "type": "object",
-            "title": "Safemetadata"
+            "title": "Safemetadata",
+            "type": "object"
           },
-          "fullName": {
-            "type": "string",
+          "summary": {
             "minLength": 1,
-            "title": "Fullname"
+            "title": "Summary",
+            "type": "string"
           },
-          "emails": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Emails"
-          },
-          "phones": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Phones"
-          },
-          "addresses": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Addresses"
+          "type": {
+            "const": "identity_candidate",
+            "default": "identity_candidate",
+            "title": "Type",
+            "type": "string"
           },
           "usernames": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Usernames"
-          },
-          "relatives": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Relatives"
-          },
-          "associates": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Associates"
-          },
-          "organizations": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Organizations"
-          },
-          "riskFlags": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Riskflags"
+            "title": "Usernames",
+            "type": "array"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "id",
           "label",
@@ -1470,43 +837,45 @@
           "fullName"
         ],
         "title": "PiiExpansionItem",
-        "description": "Normalized identity-candidate output for PII expansion."
+        "type": "object"
       },
       "PiiExpansionRequest": {
+        "additionalProperties": false,
+        "description": "Supported request payload for v1 PII expansion.",
         "properties": {
-          "subject": {
-            "$ref": "#/components/schemas/PiiExpansionSubject"
-          },
-          "seeds": {
-            "$ref": "#/components/schemas/PiiExpansionSeeds"
-          },
           "depth": {
             "$ref": "#/components/schemas/ExpansionDepth",
             "default": "standard"
           },
           "maxCandidates": {
-            "type": "integer",
+            "default": 10,
             "maximum": 25.0,
             "minimum": 1.0,
             "title": "Maxcandidates",
-            "default": 10
+            "type": "integer"
+          },
+          "seeds": {
+            "$ref": "#/components/schemas/PiiExpansionSeeds"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/PiiExpansionSubject"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "subject"
         ],
         "title": "PiiExpansionRequest",
-        "description": "Supported request payload for v1 PII expansion."
+        "type": "object"
       },
       "PiiExpansionResult": {
+        "additionalProperties": false,
+        "description": "Inline or final PII expansion result payload.",
         "properties": {
           "capability": {
-            "type": "string",
             "const": "pii_expansion",
+            "default": "pii_expansion",
             "title": "Capability",
-            "default": "pii_expansion"
+            "type": "string"
           },
           "items": {
             "items": {
@@ -1519,15 +888,15 @@
                 }
               ]
             },
-            "type": "array",
-            "title": "Items"
+            "title": "Items",
+            "type": "array"
           },
           "limit": {
-            "type": "integer",
+            "default": 25,
             "maximum": 25.0,
             "minimum": 1.0,
             "title": "Limit",
-            "default": 25
+            "type": "integer"
           },
           "nextCursor": {
             "anyOf": [
@@ -1543,8 +912,8 @@
           "total": {
             "anyOf": [
               {
-                "type": "integer",
-                "minimum": 0.0
+                "minimum": 0.0,
+                "type": "integer"
               },
               {
                 "type": "null"
@@ -1556,109 +925,104 @@
             "items": {
               "$ref": "#/components/schemas/ApiWarning"
             },
-            "type": "array",
-            "title": "Warnings"
+            "title": "Warnings",
+            "type": "array"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "title": "PiiExpansionResult",
-        "description": "Inline or final PII expansion result payload."
+        "type": "object"
       },
       "PiiExpansionRunRequest": {
+        "additionalProperties": false,
+        "description": "Run endpoint payload for PII expansion.",
         "properties": {
-          "subject": {
-            "$ref": "#/components/schemas/PiiExpansionSubject"
-          },
-          "seeds": {
-            "$ref": "#/components/schemas/PiiExpansionSeeds"
-          },
           "depth": {
             "$ref": "#/components/schemas/ExpansionDepth",
             "default": "standard"
           },
           "maxCandidates": {
-            "type": "integer",
+            "default": 10,
             "maximum": 25.0,
             "minimum": 1.0,
             "title": "Maxcandidates",
-            "default": 10
+            "type": "integer"
           },
           "responseMode": {
             "$ref": "#/components/schemas/ResponseMode",
             "default": "sync"
+          },
+          "seeds": {
+            "$ref": "#/components/schemas/PiiExpansionSeeds"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/PiiExpansionSubject"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "subject"
         ],
         "title": "PiiExpansionRunRequest",
-        "description": "Run endpoint payload for PII expansion."
+        "type": "object"
       },
       "PiiExpansionSeeds": {
+        "additionalProperties": false,
+        "description": "Supported seed types for v1 identity expansion.",
         "properties": {
-          "emails": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Emails"
-          },
-          "phones": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Phones"
-          },
           "addresses": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Addresses"
-          },
-          "usernames": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Usernames"
+            "title": "Addresses",
+            "type": "array"
           },
           "domains": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Domains"
+            "title": "Domains",
+            "type": "array"
+          },
+          "emails": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Emails",
+            "type": "array"
+          },
+          "phones": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Phones",
+            "type": "array"
+          },
+          "usernames": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Usernames",
+            "type": "array"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "title": "PiiExpansionSeeds",
-        "description": "Supported seed types for v1 identity expansion."
+        "type": "object"
       },
       "PiiExpansionSubject": {
+        "additionalProperties": false,
+        "description": "Subject details supported by v1 PII expansion.",
         "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Name"
-          },
           "aliases": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Aliases"
+            "title": "Aliases",
+            "type": "array"
           },
           "dob": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "date"
+                "format": "date",
+                "type": "string"
               },
               {
                 "type": "null"
@@ -1666,117 +1030,119 @@
             ],
             "title": "Dob"
           },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
           "regions": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Regions"
+            "title": "Regions",
+            "type": "array"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "name"
         ],
         "title": "PiiExpansionSubject",
-        "description": "Subject details supported by v1 PII expansion."
+        "type": "object"
       },
       "ResponseMode": {
-        "type": "string",
         "enum": [
           "sync",
           "async"
         ],
-        "title": "ResponseMode"
+        "title": "ResponseMode",
+        "type": "string"
       },
-      "SanitizedNormalizedAttributes": {
+      "NormalizedAttributes": {
+        "additionalProperties": false,
+        "description": "Connector-agnostic normalized attributes.",
         "properties": {
-          "names": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Names"
-          },
-          "emails": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Emails"
-          },
-          "phones": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Phones"
-          },
-          "usernames": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Usernames"
-          },
-          "domains": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Domains"
-          },
           "addresses": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Addresses"
-          },
-          "locations": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Locations"
-          },
-          "organizations": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Organizations"
+            "title": "Addresses",
+            "type": "array"
           },
           "dates": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Dates"
+            "title": "Dates",
+            "type": "array"
+          },
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Domains",
+            "type": "array"
+          },
+          "emails": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Emails",
+            "type": "array"
           },
           "keywords": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Keywords"
+            "title": "Keywords",
+            "type": "array"
+          },
+          "locations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Locations",
+            "type": "array"
+          },
+          "names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Names",
+            "type": "array"
+          },
+          "organizations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Organizations",
+            "type": "array"
+          },
+          "phones": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Phones",
+            "type": "array"
           },
           "profileHandles": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Profilehandles"
+            "title": "Profilehandles",
+            "type": "array"
+          },
+          "usernames": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Usernames",
+            "type": "array"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "SanitizedNormalizedAttributes",
-        "description": "Sanitized, connector-agnostic normalized attributes."
+        "title": "NormalizedAttributes",
+        "type": "object"
       },
       "ScrapedItemType": {
-        "type": "string",
         "enum": [
           "profile",
           "post",
@@ -1785,50 +1151,72 @@
           "channel",
           "other"
         ],
-        "title": "ScrapedItemType"
+        "title": "ScrapedItemType",
+        "type": "string"
       },
       "ScrapedSocialItem": {
+        "additionalProperties": false,
+        "description": "Recent-activity or scraped social evidence item.",
         "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Id"
-          },
-          "type": {
-            "type": "string",
-            "const": "social_activity",
-            "title": "Type",
-            "default": "social_activity"
-          },
-          "label": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Label"
-          },
-          "summary": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Summary"
-          },
           "confidenceCategory": {
             "$ref": "#/components/schemas/ConfidenceCategory"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "itemKind": {
+            "$ref": "#/components/schemas/ScrapedItemType"
+          },
+          "label": {
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
           },
           "matchRationale": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Matchrationale"
+            "title": "Matchrationale",
+            "type": "array"
+          },
+          "matched": {
+            "default": false,
+            "title": "Matched",
+            "type": "boolean"
+          },
+          "matchedCriteria": {
+            "items": {
+              "$ref": "#/components/schemas/NaturalLanguageCriterionMatch"
+            },
+            "title": "Matchedcriteria",
+            "type": "array"
           },
           "matchedInputs": {
             "items": {
               "$ref": "#/components/schemas/MatchedInputReference"
             },
-            "type": "array",
-            "title": "Matchedinputs"
+            "title": "Matchedinputs",
+            "type": "array"
           },
           "normalizedAttributes": {
-            "$ref": "#/components/schemas/SanitizedNormalizedAttributes"
+            "$ref": "#/components/schemas/NormalizedAttributes"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/SocialPlatform"
+          },
+          "publishedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedat"
           },
           "safeMetadata": {
             "additionalProperties": {
@@ -1837,13 +1225,13 @@
                   "type": "string"
                 },
                 {
+                  "type": "boolean"
+                },
+                {
                   "type": "integer"
                 },
                 {
                   "type": "number"
-                },
-                {
-                  "type": "boolean"
                 },
                 {
                   "items": {
@@ -1852,13 +1240,13 @@
                         "type": "string"
                       },
                       {
+                        "type": "boolean"
+                      },
+                      {
                         "type": "integer"
                       },
                       {
                         "type": "number"
-                      },
-                      {
-                        "type": "boolean"
                       },
                       {
                         "type": "null"
@@ -1872,42 +1260,21 @@
                 }
               ]
             },
-            "type": "object",
-            "title": "Safemetadata"
+            "title": "Safemetadata",
+            "type": "object"
           },
-          "platform": {
-            "$ref": "#/components/schemas/SocialPlatform"
+          "summary": {
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
           },
-          "itemKind": {
-            "$ref": "#/components/schemas/ScrapedItemType"
-          },
-          "publishedAt": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Publishedat"
-          },
-          "matched": {
-            "type": "boolean",
-            "title": "Matched",
-            "default": false
-          },
-          "matchedCriteria": {
-            "items": {
-              "$ref": "#/components/schemas/NaturalLanguageCriterionMatch"
-            },
-            "type": "array",
-            "title": "Matchedcriteria"
+          "type": {
+            "const": "social_activity",
+            "default": "social_activity",
+            "title": "Type",
+            "type": "string"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "id",
           "label",
@@ -1917,99 +1284,101 @@
           "itemKind"
         ],
         "title": "ScrapedSocialItem",
-        "description": "Sanitized recent-activity or scraped social evidence item."
+        "type": "object"
       },
       "ServiceStatusResponse": {
+        "additionalProperties": false,
+        "description": "Standard health and readiness response.",
         "properties": {
-          "status": {
-            "type": "string",
-            "title": "Status",
-            "default": "ok"
+          "environment": {
+            "title": "Environment",
+            "type": "string"
           },
           "service": {
-            "type": "string",
-            "title": "Service"
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
           },
           "version": {
-            "type": "string",
-            "title": "Version"
-          },
-          "environment": {
-            "type": "string",
-            "title": "Environment"
+            "title": "Version",
+            "type": "string"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "service",
           "version",
           "environment"
         ],
         "title": "ServiceStatusResponse",
-        "description": "Standard health and readiness response."
+        "type": "object"
       },
       "SocialMatchRequest": {
+        "additionalProperties": false,
+        "description": "Supported request payload for v1 social profile matching.",
         "properties": {
-          "subject": {
-            "$ref": "#/components/schemas/SocialMatchSubject"
+          "includeRecentActivity": {
+            "default": true,
+            "title": "Includerecentactivity",
+            "type": "boolean"
           },
           "matchingCriteria": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Matchingcriteria"
+            "title": "Matchingcriteria",
+            "type": "array"
+          },
+          "maxCandidatesPerPlatform": {
+            "default": 3,
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Maxcandidatesperplatform",
+            "type": "integer"
           },
           "platforms": {
             "items": {
               "$ref": "#/components/schemas/SocialPlatform"
             },
-            "type": "array",
-            "title": "Platforms"
+            "title": "Platforms",
+            "type": "array"
           },
-          "maxCandidatesPerPlatform": {
-            "type": "integer",
-            "maximum": 5.0,
-            "minimum": 1.0,
-            "title": "Maxcandidatesperplatform",
-            "default": 3
-          },
-          "includeRecentActivity": {
-            "type": "boolean",
-            "title": "Includerecentactivity",
-            "default": true
+          "subject": {
+            "$ref": "#/components/schemas/SocialMatchSubject"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "subject"
         ],
         "title": "SocialMatchRequest",
-        "description": "Supported request payload for v1 social profile matching."
+        "type": "object"
       },
       "SocialMatchResult": {
+        "additionalProperties": false,
+        "description": "Inline or final social profile match result payload.",
         "properties": {
           "capability": {
-            "type": "string",
             "const": "social_match",
+            "default": "social_match",
             "title": "Capability",
-            "default": "social_match"
+            "type": "string"
           },
           "items": {
             "items": {
               "$ref": "#/components/schemas/SocialProfileMatchItem"
             },
-            "type": "array",
-            "title": "Items"
+            "title": "Items",
+            "type": "array"
           },
           "limit": {
-            "type": "integer",
+            "default": 25,
             "maximum": 25.0,
             "minimum": 1.0,
             "title": "Limit",
-            "default": 25
+            "type": "integer"
           },
           "nextCursor": {
             "anyOf": [
@@ -2025,8 +1394,8 @@
           "total": {
             "anyOf": [
               {
-                "type": "integer",
-                "minimum": 0.0
+                "minimum": 0.0,
+                "type": "integer"
               },
               {
                 "type": "null"
@@ -2038,128 +1407,125 @@
             "items": {
               "$ref": "#/components/schemas/ApiWarning"
             },
-            "type": "array",
-            "title": "Warnings"
+            "title": "Warnings",
+            "type": "array"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "title": "SocialMatchResult",
-        "description": "Inline or final social profile match result payload."
+        "type": "object"
       },
       "SocialMatchRunRequest": {
+        "additionalProperties": false,
+        "description": "Run endpoint payload for social profile matching.",
         "properties": {
-          "subject": {
-            "$ref": "#/components/schemas/SocialMatchSubject"
+          "includeRecentActivity": {
+            "default": true,
+            "title": "Includerecentactivity",
+            "type": "boolean"
           },
           "matchingCriteria": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Matchingcriteria"
+            "title": "Matchingcriteria",
+            "type": "array"
+          },
+          "maxCandidatesPerPlatform": {
+            "default": 3,
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Maxcandidatesperplatform",
+            "type": "integer"
           },
           "platforms": {
             "items": {
               "$ref": "#/components/schemas/SocialPlatform"
             },
-            "type": "array",
-            "title": "Platforms"
-          },
-          "maxCandidatesPerPlatform": {
-            "type": "integer",
-            "maximum": 5.0,
-            "minimum": 1.0,
-            "title": "Maxcandidatesperplatform",
-            "default": 3
-          },
-          "includeRecentActivity": {
-            "type": "boolean",
-            "title": "Includerecentactivity",
-            "default": true
+            "title": "Platforms",
+            "type": "array"
           },
           "responseMode": {
             "$ref": "#/components/schemas/ResponseMode",
             "default": "sync"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/SocialMatchSubject"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "subject"
         ],
         "title": "SocialMatchRunRequest",
-        "description": "Run endpoint payload for social profile matching."
+        "type": "object"
       },
       "SocialMatchSubject": {
+        "additionalProperties": false,
+        "description": "Subject details supported by v1 social profile matching.",
         "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Name"
-          },
           "aliases": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Aliases"
-          },
-          "knownLocations": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Knownlocations"
-          },
-          "knownEmployers": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Knownemployers"
+            "title": "Aliases",
+            "type": "array"
           },
           "knownEmails": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Knownemails"
+            "title": "Knownemails",
+            "type": "array"
+          },
+          "knownEmployers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Knownemployers",
+            "type": "array"
+          },
+          "knownLocations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Knownlocations",
+            "type": "array"
           },
           "knownPhones": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Knownphones"
+            "title": "Knownphones",
+            "type": "array"
+          },
+          "knownSocialUrls": {
+            "items": {
+              "format": "uri",
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Knownsocialurls",
+            "type": "array"
           },
           "knownUsernames": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Knownusernames"
+            "title": "Knownusernames",
+            "type": "array"
           },
-          "knownSocialUrls": {
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "format": "uri"
-            },
-            "type": "array",
-            "title": "Knownsocialurls"
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "name"
         ],
         "title": "SocialMatchSubject",
-        "description": "Subject details supported by v1 social profile matching."
+        "type": "object"
       },
       "SocialPlatform": {
-        "type": "string",
         "enum": [
           "x",
           "instagram",
@@ -2167,9 +1533,12 @@
           "youtube",
           "facebook"
         ],
-        "title": "SocialPlatform"
+        "title": "SocialPlatform",
+        "type": "string"
       },
       "SocialProfileFacts": {
+        "additionalProperties": false,
+        "description": "Profile facts surfaced to API consumers.",
         "properties": {
           "bio": {
             "anyOf": [
@@ -2182,6 +1551,18 @@
             ],
             "title": "Bio"
           },
+          "followersCount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Followerscount"
+          },
           "location": {
             "anyOf": [
               {
@@ -2192,18 +1573,6 @@
               }
             ],
             "title": "Location"
-          },
-          "followersCount": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Followerscount"
           },
           "verified": {
             "anyOf": [
@@ -2217,106 +1586,29 @@
             "title": "Verified"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "title": "SocialProfileFacts",
-        "description": "Sanitized profile facts surfaced to API consumers."
+        "type": "object"
       },
       "SocialProfileMatchItem": {
+        "additionalProperties": false,
+        "description": "Normalized candidate profile output for social matching.",
         "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Id"
-          },
-          "type": {
-            "type": "string",
-            "const": "social_profile",
-            "title": "Type",
-            "default": "social_profile"
-          },
-          "label": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Label"
-          },
-          "summary": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Summary"
-          },
           "confidenceCategory": {
             "$ref": "#/components/schemas/ConfidenceCategory"
           },
-          "matchRationale": {
+          "contradictions": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Matchrationale"
+            "title": "Contradictions",
+            "type": "array"
           },
-          "matchedInputs": {
+          "criteria": {
             "items": {
-              "$ref": "#/components/schemas/MatchedInputReference"
+              "$ref": "#/components/schemas/MatchCriterionRecord"
             },
-            "type": "array",
-            "title": "Matchedinputs"
-          },
-          "normalizedAttributes": {
-            "$ref": "#/components/schemas/SanitizedNormalizedAttributes"
-          },
-          "safeMetadata": {
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "boolean"
-                },
-                {
-                  "items": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "integer"
-                      },
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "boolean"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "type": "array"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "type": "object",
-            "title": "Safemetadata"
-          },
-          "platform": {
-            "$ref": "#/components/schemas/SocialPlatform"
-          },
-          "username": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Username"
+            "title": "Criteria",
+            "type": "array"
           },
           "displayName": {
             "anyOf": [
@@ -2329,25 +1621,35 @@
             ],
             "title": "Displayname"
           },
-          "score": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Score"
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
           },
-          "contradictions": {
+          "label": {
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "matchRationale": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Contradictions"
+            "title": "Matchrationale",
+            "type": "array"
           },
-          "criteria": {
+          "matchedInputs": {
             "items": {
-              "$ref": "#/components/schemas/MatchCriterionRecord"
+              "$ref": "#/components/schemas/MatchedInputReference"
             },
-            "type": "array",
-            "title": "Criteria"
+            "title": "Matchedinputs",
+            "type": "array"
+          },
+          "normalizedAttributes": {
+            "$ref": "#/components/schemas/NormalizedAttributes"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/SocialPlatform"
           },
           "profileFacts": {
             "anyOf": [
@@ -2359,162 +1661,14 @@
               }
             ]
           },
-          "scrapedItems": {
-            "items": {
-              "$ref": "#/components/schemas/ScrapedSocialItem"
-            },
-            "type": "array",
-            "title": "Scrapeditems"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "id",
-          "label",
-          "summary",
-          "confidenceCategory",
-          "platform",
-          "username",
-          "score"
-        ],
-        "title": "SocialProfileMatchItem",
-        "description": "Normalized candidate profile output for social matching."
-      },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Location"
-          },
-          "msg": {
-            "type": "string",
-            "title": "Message"
-          },
-          "type": {
-            "type": "string",
-            "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
-          }
-        },
-        "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError"
-      },
-      "WebContentType": {
-        "type": "string",
-        "enum": [
-          "article",
-          "post",
-          "video",
-          "forum_thread",
-          "paste",
-          "other"
-        ],
-        "title": "WebContentType"
-      },
-      "WebPlatform": {
-        "type": "string",
-        "enum": [
-          "web",
-          "news",
-          "x",
-          "reddit",
-          "youtube",
-          "telegram"
-        ],
-        "title": "WebPlatform"
-      },
-      "WebSearchDateRange": {
-        "properties": {
-          "from": {
-            "type": "string",
-            "format": "date",
-            "title": "From"
-          },
-          "to": {
-            "type": "string",
-            "format": "date",
-            "title": "To"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "from",
-          "to"
-        ],
-        "title": "WebSearchDateRange",
-        "description": "Date-range filter for web search."
-      },
-      "WebSearchItem": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Id"
-          },
-          "type": {
-            "type": "string",
-            "const": "web_hit",
-            "title": "Type",
-            "default": "web_hit"
-          },
-          "label": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Label"
-          },
-          "summary": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Summary"
-          },
-          "confidenceCategory": {
-            "$ref": "#/components/schemas/ConfidenceCategory"
-          },
-          "matchRationale": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Matchrationale"
-          },
-          "matchedInputs": {
-            "items": {
-              "$ref": "#/components/schemas/MatchedInputReference"
-            },
-            "type": "array",
-            "title": "Matchedinputs"
-          },
-          "normalizedAttributes": {
-            "$ref": "#/components/schemas/SanitizedNormalizedAttributes"
-          },
           "safeMetadata": {
             "additionalProperties": {
               "anyOf": [
                 {
                   "type": "string"
+                },
+                {
+                  "type": "boolean"
                 },
                 {
                   "type": "integer"
@@ -2523,22 +1677,19 @@
                   "type": "number"
                 },
                 {
-                  "type": "boolean"
-                },
-                {
                   "items": {
                     "anyOf": [
                       {
                         "type": "string"
                       },
                       {
+                        "type": "boolean"
+                      },
+                      {
                         "type": "integer"
                       },
                       {
                         "type": "number"
-                      },
-                      {
-                        "type": "boolean"
                       },
                       {
                         "type": "null"
@@ -2552,16 +1703,190 @@
                 }
               ]
             },
-            "type": "object",
-            "title": "Safemetadata"
+            "title": "Safemetadata",
+            "type": "object"
           },
-          "sourceType": {
-            "$ref": "#/components/schemas/WebSourceType"
+          "score": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "number"
+          },
+          "scrapedItems": {
+            "items": {
+              "$ref": "#/components/schemas/ScrapedSocialItem"
+            },
+            "title": "Scrapeditems",
+            "type": "array"
+          },
+          "summary": {
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          },
+          "type": {
+            "const": "social_profile",
+            "default": "social_profile",
+            "title": "Type",
+            "type": "string"
+          },
+          "username": {
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "summary",
+          "confidenceCategory",
+          "platform",
+          "username",
+          "score"
+        ],
+        "title": "SocialProfileMatchItem",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WebContentType": {
+        "enum": [
+          "article",
+          "post",
+          "video",
+          "forum_thread",
+          "paste",
+          "other"
+        ],
+        "title": "WebContentType",
+        "type": "string"
+      },
+      "WebPlatform": {
+        "enum": [
+          "web",
+          "news",
+          "x",
+          "reddit",
+          "youtube",
+          "telegram"
+        ],
+        "title": "WebPlatform",
+        "type": "string"
+      },
+      "WebSearchDateRange": {
+        "additionalProperties": false,
+        "description": "Date-range filter for web search.",
+        "properties": {
+          "from": {
+            "format": "date",
+            "title": "From",
+            "type": "string"
+          },
+          "to": {
+            "format": "date",
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "title": "WebSearchDateRange",
+        "type": "object"
+      },
+      "WebSearchItem": {
+        "additionalProperties": false,
+        "description": "Normalized web/adverse-media result item.",
+        "properties": {
+          "confidenceCategory": {
+            "$ref": "#/components/schemas/ConfidenceCategory"
+          },
+          "contentType": {
+            "$ref": "#/components/schemas/WebContentType"
           },
           "displayDomain": {
-            "type": "string",
             "minLength": 1,
-            "title": "Displaydomain"
+            "title": "Displaydomain",
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "matchRationale": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Matchrationale",
+            "type": "array"
+          },
+          "matchedInputs": {
+            "items": {
+              "$ref": "#/components/schemas/MatchedInputReference"
+            },
+            "title": "Matchedinputs",
+            "type": "array"
+          },
+          "normalizedAttributes": {
+            "$ref": "#/components/schemas/NormalizedAttributes"
+          },
+          "publishedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedat"
           },
           "resultUrl": {
             "anyOf": [
@@ -2572,27 +1897,69 @@
                 "type": "null"
               }
             ],
-            "title": "Resulturl",
-            "description": "Full URL for web/adverse-media hits. Web results intentionally expose the source URL so investigators can review the underlying page."
+            "description": "Full URL for web/adverse-media hits. Web results intentionally expose the source URL so investigators can review the underlying page.",
+            "title": "Resulturl"
           },
-          "contentType": {
-            "$ref": "#/components/schemas/WebContentType"
+          "safeMetadata": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Safemetadata",
+            "type": "object"
           },
-          "publishedAt": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Publishedat"
+          "sourceType": {
+            "$ref": "#/components/schemas/WebSourceType"
+          },
+          "summary": {
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          },
+          "type": {
+            "const": "web_hit",
+            "default": "web_hit",
+            "title": "Type",
+            "type": "string"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "id",
           "label",
@@ -2603,46 +1970,18 @@
           "contentType"
         ],
         "title": "WebSearchItem",
-        "description": "Normalized web/adverse-media result item."
+        "type": "object"
       },
       "WebSearchRequest": {
+        "additionalProperties": false,
+        "description": "Supported request payload for the web/adverse-media capability.",
         "properties": {
-          "subject": {
-            "$ref": "#/components/schemas/WebSearchSubject"
-          },
           "adverseTerms": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Adverseterms"
-          },
-          "seedUrls": {
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "format": "uri"
-            },
-            "type": "array",
-            "title": "Seedurls"
-          },
-          "socialAccounts": {
-            "items": {
-              "$ref": "#/components/schemas/WebSearchSocialAccount"
-            },
-            "type": "array",
-            "title": "Socialaccounts"
-          },
-          "platformFilters": {
-            "items": {
-              "$ref": "#/components/schemas/WebPlatform"
-            },
-            "type": "array",
-            "title": "Platformfilters",
-            "default": [
-              "web",
-              "news"
-            ]
+            "title": "Adverseterms",
+            "type": "array"
           },
           "dateRange": {
             "anyOf": [
@@ -2655,42 +1994,72 @@
             ]
           },
           "maxResults": {
-            "type": "integer",
+            "default": 50,
             "maximum": 100.0,
             "minimum": 1.0,
             "title": "Maxresults",
-            "default": 50
+            "type": "integer"
+          },
+          "platformFilters": {
+            "default": [
+              "web",
+              "news"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/WebPlatform"
+            },
+            "title": "Platformfilters",
+            "type": "array"
+          },
+          "seedUrls": {
+            "items": {
+              "format": "uri",
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Seedurls",
+            "type": "array"
+          },
+          "socialAccounts": {
+            "items": {
+              "$ref": "#/components/schemas/WebSearchSocialAccount"
+            },
+            "title": "Socialaccounts",
+            "type": "array"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/WebSearchSubject"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "subject"
         ],
         "title": "WebSearchRequest",
-        "description": "Supported request payload for the web/adverse-media capability."
+        "type": "object"
       },
       "WebSearchResult": {
+        "additionalProperties": false,
+        "description": "Inline or final web/adverse-media result payload.",
         "properties": {
           "capability": {
-            "type": "string",
             "const": "web_search",
+            "default": "web_search",
             "title": "Capability",
-            "default": "web_search"
+            "type": "string"
           },
           "items": {
             "items": {
               "$ref": "#/components/schemas/WebSearchItem"
             },
-            "type": "array",
-            "title": "Items"
+            "title": "Items",
+            "type": "array"
           },
           "limit": {
-            "type": "integer",
+            "default": 50,
             "maximum": 100.0,
             "minimum": 1.0,
             "title": "Limit",
-            "default": 50
+            "type": "integer"
           },
           "nextCursor": {
             "anyOf": [
@@ -2706,8 +2075,8 @@
           "total": {
             "anyOf": [
               {
-                "type": "integer",
-                "minimum": 0.0
+                "minimum": 0.0,
+                "type": "integer"
               },
               {
                 "type": "null"
@@ -2719,53 +2088,23 @@
             "items": {
               "$ref": "#/components/schemas/ApiWarning"
             },
-            "type": "array",
-            "title": "Warnings"
+            "title": "Warnings",
+            "type": "array"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "title": "WebSearchResult",
-        "description": "Inline or final web/adverse-media result payload."
+        "type": "object"
       },
       "WebSearchRunRequest": {
+        "additionalProperties": false,
+        "description": "Run endpoint payload for web search.",
         "properties": {
-          "subject": {
-            "$ref": "#/components/schemas/WebSearchSubject"
-          },
           "adverseTerms": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Adverseterms"
-          },
-          "seedUrls": {
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "format": "uri"
-            },
-            "type": "array",
-            "title": "Seedurls"
-          },
-          "socialAccounts": {
-            "items": {
-              "$ref": "#/components/schemas/WebSearchSocialAccount"
-            },
-            "type": "array",
-            "title": "Socialaccounts"
-          },
-          "platformFilters": {
-            "items": {
-              "$ref": "#/components/schemas/WebPlatform"
-            },
-            "type": "array",
-            "title": "Platformfilters",
-            "default": [
-              "web",
-              "news"
-            ]
+            "title": "Adverseterms",
+            "type": "array"
           },
           "dateRange": {
             "anyOf": [
@@ -2778,26 +2117,56 @@
             ]
           },
           "maxResults": {
-            "type": "integer",
+            "default": 50,
             "maximum": 100.0,
             "minimum": 1.0,
             "title": "Maxresults",
-            "default": 50
+            "type": "integer"
+          },
+          "platformFilters": {
+            "default": [
+              "web",
+              "news"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/WebPlatform"
+            },
+            "title": "Platformfilters",
+            "type": "array"
           },
           "responseMode": {
             "$ref": "#/components/schemas/ResponseMode",
             "default": "sync"
+          },
+          "seedUrls": {
+            "items": {
+              "format": "uri",
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Seedurls",
+            "type": "array"
+          },
+          "socialAccounts": {
+            "items": {
+              "$ref": "#/components/schemas/WebSearchSocialAccount"
+            },
+            "title": "Socialaccounts",
+            "type": "array"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/WebSearchSubject"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "subject"
         ],
         "title": "WebSearchRunRequest",
-        "description": "Run endpoint payload for web search."
+        "type": "object"
       },
       "WebSearchSocialAccount": {
+        "additionalProperties": false,
+        "description": "Exact social account hint to enrich web/adverse-media context.",
         "properties": {
           "platform": {
             "anyOf": [
@@ -2809,6 +2178,19 @@
               }
             ]
           },
+          "profileUrl": {
+            "anyOf": [
+              {
+                "format": "uri",
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileurl"
+          },
           "username": {
             "anyOf": [
               {
@@ -2819,69 +2201,53 @@
               }
             ],
             "title": "Username"
-          },
-          "profileUrl": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1,
-                "format": "uri"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Profileurl"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "title": "WebSearchSocialAccount",
-        "description": "Exact social account hint to enrich web/adverse-media context."
+        "type": "object"
       },
       "WebSearchSubject": {
+        "additionalProperties": false,
+        "description": "Search subject definition for web/adverse-media lookups.",
         "properties": {
-          "type": {
-            "$ref": "#/components/schemas/WebSubjectType"
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Name"
-          },
           "aliases": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Aliases"
-          },
-          "regions": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Regions"
+            "title": "Aliases",
+            "type": "array"
           },
           "languages": {
             "items": {
               "type": "string"
             },
-            "type": "array",
-            "title": "Languages"
+            "title": "Languages",
+            "type": "array"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "regions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Regions",
+            "type": "array"
+          },
+          "type": {
+            "$ref": "#/components/schemas/WebSubjectType"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
         "required": [
           "type",
           "name"
         ],
         "title": "WebSearchSubject",
-        "description": "Search subject definition for web/adverse-media lookups."
+        "type": "object"
       },
       "WebSourceType": {
-        "type": "string",
         "enum": [
           "web",
           "news",
@@ -2890,48 +2256,664 @@
           "person_record",
           "derived"
         ],
-        "title": "WebSourceType"
+        "title": "WebSourceType",
+        "type": "string"
       },
       "WebSubjectType": {
-        "type": "string",
         "enum": [
           "person",
           "organization",
           "keyword"
         ],
-        "title": "WebSubjectType"
+        "title": "WebSubjectType",
+        "type": "string"
       }
     },
     "securitySchemes": {
-      "BearerApiKey": {
-        "type": "http",
-        "description": "Alternative authentication form. Send the provisioned API key as `Authorization: Bearer <key>`.",
-        "scheme": "bearer"
-      },
       "ApiKeyAuth": {
-        "type": "apiKey",
         "description": "Primary authentication header. Send the provisioned API key as `X-API-Key: <key>`.",
         "in": "header",
-        "name": "X-API-Key"
+        "name": "X-API-Key",
+        "type": "apiKey"
+      },
+      "BearerApiKey": {
+        "description": "Alternative authentication form. Send the provisioned API key as `Authorization: Bearer <key>`.",
+        "scheme": "bearer",
+        "type": "http"
       }
     }
   },
+  "info": {
+    "description": "API-first OSINT service for customer intelligence workflows.\n\nAuthentication: send the provisioned API key as `X-API-Key: <key>` or `Authorization: Bearer <key>`.\n\nAll capability responses return normalized, deduplicated, connector-agnostic outputs. Provider provenance\nand connector-specific identifiers are intentionally excluded from public result payloads. Raw source URLs are\nexcluded except for web/adverse-media hits, where `resultUrl` intentionally exposes the full page URL.\n\nEach capability supports inline execution, async job lookup, and server-sent event streaming.",
+    "summary": "Deployable API-first intelligence service for web search, PII expansion, and social profile matching.",
+    "title": "intelligence-api",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Service liveness check",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Service readiness check",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/v1/pii-expansion": {
+      "post": {
+        "description": "Create a PII-expansion job and wait for an inline result when `responseMode` is `sync`. If the job does not finish before the inline timeout, or when `responseMode` is `async`, the API returns a persisted job envelope. Every response includes `X-Job-Id` for later lookup.",
+        "operationId": "run_pii_expansion_v1_pii_expansion_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PiiExpansionRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PiiExpansionResult"
+                    },
+                    {
+                      "$ref": "#/components/schemas/JobEnvelope_PiiExpansionResult_"
+                    }
+                  ],
+                  "title": "Response Run Pii Expansion V1 Pii Expansion Post"
+                }
+              }
+            },
+            "description": "Normalized identity and related social-candidate results when completed inline, otherwise a job envelope."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Run PII expansion",
+        "tags": [
+          "pii-expansion"
+        ]
+      }
+    },
+    "/v1/pii-expansion/jobs/{job_id}": {
+      "get": {
+        "description": "Read the persisted job envelope for one PII-expansion run. When the job has completed, the `result` field contains a paginated page of normalized items controlled by the `limit` and `cursor` query parameters.",
+        "operationId": "get_pii_expansion_job_v1_pii_expansion_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 25,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobEnvelope_PiiExpansionResult_"
+                }
+              }
+            },
+            "description": "Persisted job state with an optional paginated result page."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Read a PII expansion job",
+        "tags": [
+          "pii-expansion"
+        ]
+      }
+    },
+    "/v1/pii-expansion/stream": {
+      "post": {
+        "description": "Create a persisted PII-expansion job and immediately stream typed server-sent events until completion. Use the `X-Job-Id` response header to reconnect at `GET /v1/pii-expansion/jobs/{job_id}/stream` with `Last-Event-ID`.",
+        "operationId": "stream_pii_expansion_v1_pii_expansion_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PiiExpansionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Create and stream a PII expansion job",
+        "tags": [
+          "pii-expansion"
+        ]
+      }
+    },
+    "/v1/social-profile-match": {
+      "post": {
+        "description": "Create a social-profile-match job and wait for an inline result when `responseMode` is `sync`. If the job does not finish before the inline timeout, or when `responseMode` is `async`, the API returns a persisted job envelope. Every response includes `X-Job-Id` for later lookup.",
+        "operationId": "run_social_profile_match_v1_social_profile_match_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SocialMatchRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SocialMatchResult"
+                    },
+                    {
+                      "$ref": "#/components/schemas/JobEnvelope_SocialMatchResult_"
+                    }
+                  ],
+                  "title": "Response Run Social Profile Match V1 Social Profile Match Post"
+                }
+              }
+            },
+            "description": "Normalized scored candidate profiles when completed inline, otherwise a job envelope."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Run social profile match analysis",
+        "tags": [
+          "social-profile-match"
+        ]
+      }
+    },
+    "/v1/social-profile-match/jobs/{job_id}": {
+      "get": {
+        "description": "Read the persisted job envelope for one social-profile-match run. When the job has completed, the `result` field contains a paginated page of normalized items controlled by the `limit` and `cursor` query parameters.",
+        "operationId": "get_social_profile_match_job_v1_social_profile_match_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 25,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobEnvelope_SocialMatchResult_"
+                }
+              }
+            },
+            "description": "Persisted job state with an optional paginated result page."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Read a social profile match job",
+        "tags": [
+          "social-profile-match"
+        ]
+      }
+    },
+    "/v1/social-profile-match/stream": {
+      "post": {
+        "description": "Create a persisted social-profile-match job and immediately stream typed server-sent events until completion. Use the `X-Job-Id` response header to reconnect at `GET /v1/social-profile-match/jobs/{job_id}/stream` with `Last-Event-ID`.",
+        "operationId": "stream_social_profile_match_v1_social_profile_match_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SocialMatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Create and stream a social profile match job",
+        "tags": [
+          "social-profile-match"
+        ]
+      }
+    },
+    "/v1/web-search": {
+      "post": {
+        "description": "Create a web-search job and wait for an inline result when `responseMode` is `sync`. If the job does not finish before the inline timeout, or when `responseMode` is `async`, the API returns a persisted job envelope. Every response includes `X-Job-Id` for later lookup.",
+        "operationId": "run_web_search_v1_web_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebSearchRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WebSearchResult"
+                    },
+                    {
+                      "$ref": "#/components/schemas/JobEnvelope_WebSearchResult_"
+                    }
+                  ],
+                  "title": "Response Run Web Search V1 Web Search Post"
+                }
+              }
+            },
+            "description": "Normalized search hits when completed inline, otherwise a job envelope."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Run web/adverse-media search",
+        "tags": [
+          "web-search"
+        ]
+      }
+    },
+    "/v1/web-search/jobs/{job_id}": {
+      "get": {
+        "description": "Read the persisted job envelope for one web-search run. When the job has completed, the `result` field contains a paginated page of normalized items controlled by the `limit` and `cursor` query parameters.",
+        "operationId": "get_web_search_job_v1_web_search_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobEnvelope_WebSearchResult_"
+                }
+              }
+            },
+            "description": "Persisted job state with an optional paginated result page."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Read a web/adverse-media job",
+        "tags": [
+          "web-search"
+        ]
+      }
+    },
+    "/v1/web-search/stream": {
+      "post": {
+        "description": "Create a persisted web-search job and immediately stream typed server-sent events until completion. Use the `X-Job-Id` response header to reconnect at `GET /v1/web-search/jobs/{job_id}/stream` with `Last-Event-ID`.",
+        "operationId": "stream_web_search_v1_web_search_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerApiKey": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Create and stream a web/adverse-media job",
+        "tags": [
+          "web-search"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Production Intelligence API",
+      "url": "https://api.ie.intrace.ai"
+    }
+  ],
   "tags": [
     {
-      "name": "web-search",
-      "description": "Search public web, news, and supported public social surfaces for adverse-media or subject-mention hits."
+      "description": "Search public web, news, and supported public social surfaces for adverse-media or subject-mention hits.",
+      "name": "web-search"
     },
     {
-      "name": "pii-expansion",
-      "description": "Expand known identifiers into normalized identity candidates and related sanitized social/profile signals."
+      "description": "Expand known identifiers into normalized identity candidates and related social/profile signals.",
+      "name": "pii-expansion"
     },
     {
-      "name": "social-profile-match",
-      "description": "Find and score candidate social profiles against supplied corroborating hints and natural-language activity criteria."
+      "description": "Find and score candidate social profiles against supplied corroborating hints and natural-language activity criteria.",
+      "name": "social-profile-match"
     },
     {
-      "name": "system",
-      "description": "Operational liveness and readiness endpoints."
+      "description": "Operational liveness and readiness endpoints.",
+      "name": "system"
     }
   ]
 }

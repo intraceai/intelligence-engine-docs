@@ -9,19 +9,19 @@ Use web search to find public web, news, and supported public social-surface men
 
 Requests can include exact social account hints in `socialAccounts` using a supported platform plus username or profile URL. The API uses those hints to retrieve available profile and recent-activity context from the existing social scrapers and returns that context as normalized social web hits alongside general web/news search results.
 
-Results are returned as normalized web-hit items with `confidenceCategory`, matched inputs, summary text, sanitized metadata, display domain, source type, content type, publication time when available, and `resultUrl` for the full source page URL. Web/adverse-media search intentionally exposes this URL so investigators can review the underlying page.
+Results are returned as normalized web-hit items with `confidenceCategory`, matched inputs, summary text, metadata, display domain, source type, content type, publication time when available, and `resultUrl` for the full source page URL. Web/adverse-media search intentionally exposes this URL so investigators can review the underlying page.
 
 ## PII expansion
 
-Use PII expansion to expand supplied seeds such as emails, phones, usernames, addresses, and domains into identity candidates and related sanitized social/profile signals. This capability is intended for lead enrichment, identity-resolution support, and discovering additional candidate identifiers from known inputs.
+Use PII expansion to expand supplied seeds such as emails, phones, usernames, addresses, and domains into identity candidates and related social/profile signals. This capability is intended for lead enrichment, identity-resolution support, and discovering additional candidate identifiers from known inputs.
 
-Results may include identity-candidate items and related social-profile items. Each returned item includes `confidenceCategory`, match rationale, matched inputs, normalized attributes, and sanitized metadata so consumers can rank and review candidate links.
+Results may include identity-candidate items and related social-profile items. Each returned item includes `confidenceCategory`, match rationale, matched inputs, normalized attributes, and metadata so consumers can rank and review candidate links. Breach-derived identity candidates preserve investigator-useful leak context in `safeMetadata` such as `breachSources`, `breachDates`, `exposedFields`, `credentialExposure`, and `credentialTypes`; credential values such as passwords, hashes, salts, tokens, and raw connector payloads are not returned.
 
 ## Social profile match
 
 Use social profile match to discover and score candidate social profiles against supplied subject hints such as names, locations, employers, usernames, social URLs, and natural-language matching criteria. This capability is intended for profile-discovery and profile-verification workflows where corroborating hints are available.
 
-Results include `confidenceCategory`, scoring rationale, contradictions, profile facts, matched criteria, and sanitized recent activity when available.
+Results include `confidenceCategory`, scoring rationale, contradictions, profile facts, matched criteria, and recent activity when available.
 
 ## Output guarantees
 
