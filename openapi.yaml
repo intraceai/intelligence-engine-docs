@@ -50,6 +50,18 @@
         "title": "ApiWarning",
         "type": "object"
       },
+      "BodyTypeBuild": {
+        "enum": [
+          "Slim",
+          "Average",
+          "Athletic / Fit",
+          "Muscular",
+          "Heavyset",
+          "Unknown"
+        ],
+        "title": "BodyTypeBuild",
+        "type": "string"
+      },
       "Capability": {
         "enum": [
           "web_search",
@@ -65,6 +77,75 @@
           "uncertain"
         ],
         "title": "ConfidenceCategory",
+        "type": "string"
+      },
+      "DriversLicenseState": {
+        "enum": [
+          "AL",
+          "AK",
+          "AZ",
+          "AR",
+          "CA",
+          "CO",
+          "CT",
+          "DE",
+          "DC",
+          "FL",
+          "GA",
+          "HI",
+          "ID",
+          "IL",
+          "IN",
+          "IA",
+          "KS",
+          "KY",
+          "LA",
+          "ME",
+          "MD",
+          "MA",
+          "MI",
+          "MN",
+          "MS",
+          "MO",
+          "MT",
+          "NE",
+          "NV",
+          "NH",
+          "NJ",
+          "NM",
+          "NY",
+          "NC",
+          "ND",
+          "OH",
+          "OK",
+          "OR",
+          "PA",
+          "RI",
+          "SC",
+          "SD",
+          "TN",
+          "TX",
+          "UT",
+          "VT",
+          "VA",
+          "WA",
+          "WV",
+          "WI",
+          "WY"
+        ],
+        "title": "DriversLicenseState",
+        "type": "string"
+      },
+      "EmploymentStatus": {
+        "enum": [
+          "Employee",
+          "Contractor",
+          "Former Employee",
+          "Terminated",
+          "Applicant",
+          "Unknown"
+        ],
+        "title": "EmploymentStatus",
         "type": "string"
       },
       "ExpansionDepth": {
@@ -650,9 +731,29 @@
           "employer",
           "social_url",
           "seed_url",
-          "date_of_birth"
+          "date_of_birth",
+          "place_of_birth",
+          "age",
+          "gender",
+          "drivers_license_state",
+          "employment_role",
+          "employment_department",
+          "employment_location",
+          "employment_status"
         ],
         "title": "MatchedInputType",
+        "type": "string"
+      },
+      "MilitaryStatus": {
+        "enum": [
+          "No Military Service",
+          "Active Duty",
+          "Reserve",
+          "National Guard",
+          "Veteran",
+          "Unknown"
+        ],
+        "title": "MilitaryStatus",
         "type": "string"
       },
       "NaturalLanguageCriterionMatch": {
@@ -735,7 +836,7 @@
             "type": "array"
           },
           "normalizedAttributes": {
-            "$ref": "#/components/schemas/NormalizedAttributes"
+            "$ref": "#/components/schemas/SanitizedNormalizedAttributes"
           },
           "organizations": {
             "items": {
@@ -1057,9 +1158,9 @@
         "title": "ResponseMode",
         "type": "string"
       },
-      "NormalizedAttributes": {
+      "SanitizedNormalizedAttributes": {
         "additionalProperties": false,
-        "description": "Connector-agnostic normalized attributes.",
+        "description": "Sanitized, connector-agnostic normalized attributes.",
         "properties": {
           "addresses": {
             "items": {
@@ -1139,7 +1240,7 @@
             "type": "array"
           }
         },
-        "title": "NormalizedAttributes",
+        "title": "SanitizedNormalizedAttributes",
         "type": "object"
       },
       "ScrapedItemType": {
@@ -1156,7 +1257,7 @@
       },
       "ScrapedSocialItem": {
         "additionalProperties": false,
-        "description": "Recent-activity or scraped social evidence item.",
+        "description": "Sanitized recent-activity or scraped social evidence item.",
         "properties": {
           "confidenceCategory": {
             "$ref": "#/components/schemas/ConfidenceCategory"
@@ -1201,7 +1302,7 @@
             "type": "array"
           },
           "normalizedAttributes": {
-            "$ref": "#/components/schemas/NormalizedAttributes"
+            "$ref": "#/components/schemas/SanitizedNormalizedAttributes"
           },
           "platform": {
             "$ref": "#/components/schemas/SocialPlatform"
@@ -1538,7 +1639,7 @@
       },
       "SocialProfileFacts": {
         "additionalProperties": false,
-        "description": "Profile facts surfaced to API consumers.",
+        "description": "Sanitized profile facts surfaced to API consumers.",
         "properties": {
           "bio": {
             "anyOf": [
@@ -1646,7 +1747,7 @@
             "type": "array"
           },
           "normalizedAttributes": {
-            "$ref": "#/components/schemas/NormalizedAttributes"
+            "$ref": "#/components/schemas/SanitizedNormalizedAttributes"
           },
           "platform": {
             "$ref": "#/components/schemas/SocialPlatform"
@@ -1747,6 +1848,32 @@
         ],
         "title": "SocialProfileMatchItem",
         "type": "object"
+      },
+      "SubjectEthnicity": {
+        "enum": [
+          "American Indian or Alaska Native",
+          "Asian",
+          "Black or African American",
+          "Hispanic or Latino",
+          "Middle Eastern or North African",
+          "Native Hawaiian or Other Pacific Islander",
+          "White",
+          "Other",
+          "Unknown"
+        ],
+        "title": "SubjectEthnicity",
+        "type": "string"
+      },
+      "SubjectGender": {
+        "enum": [
+          "Male",
+          "Female",
+          "Non-binary",
+          "Other",
+          "Unknown"
+        ],
+        "title": "SubjectGender",
+        "type": "string"
       },
       "ValidationError": {
         "properties": {
@@ -1874,7 +2001,7 @@
             "type": "array"
           },
           "normalizedAttributes": {
-            "$ref": "#/components/schemas/NormalizedAttributes"
+            "$ref": "#/components/schemas/SanitizedNormalizedAttributes"
           },
           "publishedAt": {
             "anyOf": [
@@ -2217,6 +2344,173 @@
             "title": "Aliases",
             "type": "array"
           },
+          "approximateAge": {
+            "anyOf": [
+              {
+                "maximum": 130.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approximateage"
+          },
+          "bodyTypeBuild": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BodyTypeBuild"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dateOfBirth": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dateofbirth"
+          },
+          "driversLicenseState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DriversLicenseState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "emailAddress": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "format": "email",
+            "title": "Emailaddress"
+          },
+          "employer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employer"
+          },
+          "employmentDateOfHire": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employmentdateofhire"
+          },
+          "employmentDepartment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employmentdepartment"
+          },
+          "employmentLocation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employmentlocation"
+          },
+          "employmentRole": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employmentrole"
+          },
+          "employmentStatus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmploymentStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ethnicity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubjectEthnicity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubjectGender"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "imageFileId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imagefileid"
+          },
+          "imageUrl": {
+            "anyOf": [
+              {
+                "format": "uri",
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imageurl"
+          },
           "languages": {
             "items": {
               "type": "string"
@@ -2224,10 +2518,42 @@
             "title": "Languages",
             "type": "array"
           },
+          "militaryStatus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MilitaryStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mobilePhoneNumber": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mobilephonenumber"
+          },
           "name": {
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "placeOfBirth": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Placeofbirth"
           },
           "regions": {
             "items": {
@@ -2235,6 +2561,25 @@
             },
             "title": "Regions",
             "type": "array"
+          },
+          "socialMediaUrls": {
+            "items": {
+              "$ref": "#/components/schemas/WebSearchSubjectSocialMediaUrl"
+            },
+            "title": "Socialmediaurls",
+            "type": "array"
+          },
+          "terminationDate": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminationdate"
           },
           "type": {
             "$ref": "#/components/schemas/WebSubjectType"
@@ -2245,6 +2590,33 @@
           "name"
         ],
         "title": "WebSearchSubject",
+        "type": "object"
+      },
+      "WebSearchSubjectSocialMediaUrl": {
+        "additionalProperties": false,
+        "description": "Known social profile URL that belongs to the requested subject.",
+        "properties": {
+          "platform": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SocialPlatform"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "url": {
+            "format": "uri",
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "WebSearchSubjectSocialMediaUrl",
         "type": "object"
       },
       "WebSourceType": {
@@ -2904,7 +3276,7 @@
       "name": "web-search"
     },
     {
-      "description": "Expand known identifiers into normalized identity candidates and related social/profile signals.",
+      "description": "Expand known identifiers into normalized identity candidates and related sanitized social/profile signals.",
       "name": "pii-expansion"
     },
     {

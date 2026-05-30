@@ -7,7 +7,11 @@ description: What each current Intelligence API capability does
 
 Use web search to find public web, news, and supported public social-surface mentions for a person, organization, or keyword. This capability is intended for adverse-media review, public-context discovery, and triage workflows where an investigator needs normalized hits with enough context to decide what to review next.
 
-Requests can include exact social account hints in `socialAccounts` using a supported platform plus username or profile URL. The API uses those hints to retrieve available profile and recent-activity context from the existing social scrapers and returns that context as normalized social web hits alongside general web/news search results.
+Requests can include expanded person-subject context such as date of birth, place of birth, email address, approximate age, mobile phone number, driver's license state, body type/build, military status, ethnicity, employer, employment dates, department, role, location, employment status, and subject-owned social media URLs. These fields follow the normal API naming convention shown in the generated reference.
+
+The API uses these fields according to their reliability. Name, aliases, regions, employer, employment location, place of birth, role, and department may narrow generated search queries. Exact subject social media URLs are routed through the same social-context retrieval path as `socialAccounts`. Email, phone, date of birth, employment dates, license state, employment status, gender, ethnicity, body type/build, and military status are used for corroboration or exclusion context, not as standalone reasons to include a result.
+
+Requests can also include exact social account hints in top-level `socialAccounts` using a supported platform plus username or profile URL. The API uses those hints to retrieve available profile and recent-activity context from the existing social scrapers and returns that context as normalized social web hits alongside general web/news search results.
 
 Results are returned as normalized web-hit items with `confidenceCategory`, matched inputs, summary text, metadata, display domain, source type, content type, publication time when available, and `resultUrl` for the full source page URL. Web/adverse-media search intentionally exposes this URL so investigators can review the underlying page.
 
