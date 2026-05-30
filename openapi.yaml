@@ -1,6 +1,14 @@
 {
   "components": {
     "schemas": {
+      "AnalysisType": {
+        "enum": [
+          "match",
+          "behavioral_analysis"
+        ],
+        "title": "AnalysisType",
+        "type": "string"
+      },
       "ApiError": {
         "additionalProperties": false,
         "description": "Standard API error payload.",
@@ -50,6 +58,140 @@
         "title": "ApiWarning",
         "type": "object"
       },
+      "BehavioralAnalysisConfig": {
+        "additionalProperties": false,
+        "description": "Optional interpretation layer that uses Match output as input.",
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "focus": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Focus",
+            "type": "array"
+          },
+          "targetContext": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TargetContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "timeBucket": {
+            "$ref": "#/components/schemas/TimeBucket",
+            "default": "week"
+          }
+        },
+        "title": "BehavioralAnalysisConfig",
+        "type": "object"
+      },
+      "BehavioralAnalysisResult": {
+        "additionalProperties": false,
+        "properties": {
+          "accountsDrivingActivity": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Accountsdrivingactivity",
+            "type": "array"
+          },
+          "confidence": {
+            "default": 0.0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "keyRecordIds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keyrecordids",
+            "type": "array"
+          },
+          "keySignals": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keysignals",
+            "type": "array"
+          },
+          "limits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limits",
+            "type": "array"
+          },
+          "riskAssessment": {
+            "$ref": "#/components/schemas/RiskAssessment"
+          },
+          "summary": {
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/BehavioralTimelineItem"
+            },
+            "title": "Timeline",
+            "type": "array"
+          }
+        },
+        "required": [
+          "summary",
+          "riskAssessment"
+        ],
+        "title": "BehavioralAnalysisResult",
+        "type": "object"
+      },
+      "BehavioralTimelineItem": {
+        "additionalProperties": false,
+        "properties": {
+          "period": {
+            "minLength": 1,
+            "title": "Period",
+            "type": "string"
+          },
+          "recordIds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Recordids",
+            "type": "array"
+          },
+          "summary": {
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "summary"
+        ],
+        "title": "BehavioralTimelineItem",
+        "type": "object"
+      },
       "BodyTypeBuild": {
         "enum": [
           "Slim",
@@ -66,7 +208,7 @@
         "enum": [
           "web_search",
           "pii_expansion",
-          "social_match"
+          "social_profile_analysis"
         ],
         "title": "Capability",
         "type": "string"
@@ -303,7 +445,7 @@
         "title": "JobEnvelope[PiiExpansionResult]",
         "type": "object"
       },
-      "JobEnvelope_SocialMatchResult_": {
+      "JobEnvelope_SocialProfileAnalysisResult_": {
         "additionalProperties": false,
         "properties": {
           "capability": {
@@ -361,7 +503,7 @@
           "result": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/SocialMatchResult"
+                "$ref": "#/components/schemas/SocialProfileAnalysisResult"
               },
               {
                 "type": "null"
@@ -434,7 +576,7 @@
           "status",
           "submittedAt"
         ],
-        "title": "JobEnvelope[SocialMatchResult]",
+        "title": "JobEnvelope[SocialProfileAnalysisResult]",
         "type": "object"
       },
       "JobEnvelope_WebSearchResult_": {
@@ -647,53 +789,27 @@
         "title": "JobSummary",
         "type": "object"
       },
-      "MatchCriterionRecord": {
+      "MatchAnalysisResult": {
         "additionalProperties": false,
-        "description": "Per-criterion scoring or corroboration detail.",
         "properties": {
-          "criterion": {
-            "$ref": "#/components/schemas/MatchCriterionType"
+          "matchedRecords": {
+            "items": {
+              "$ref": "#/components/schemas/SocialMatchedRecord"
+            },
+            "title": "Matchedrecords",
+            "type": "array"
           },
-          "matched": {
-            "title": "Matched",
-            "type": "boolean"
-          },
-          "rationale": {
+          "summary": {
             "minLength": 1,
-            "title": "Rationale",
+            "title": "Summary",
             "type": "string"
-          },
-          "scoreContribution": {
-            "default": 0.0,
-            "maximum": 1.0,
-            "minimum": -1.0,
-            "title": "Scorecontribution",
-            "type": "number"
           }
         },
         "required": [
-          "criterion",
-          "matched",
-          "rationale"
+          "summary"
         ],
-        "title": "MatchCriterionRecord",
+        "title": "MatchAnalysisResult",
         "type": "object"
-      },
-      "MatchCriterionType": {
-        "enum": [
-          "direct_url",
-          "username",
-          "display_name",
-          "alias",
-          "location",
-          "employer",
-          "email",
-          "phone",
-          "bio",
-          "activity"
-        ],
-        "title": "MatchCriterionType",
-        "type": "string"
       },
       "MatchedInputReference": {
         "additionalProperties": false,
@@ -755,28 +871,6 @@
         ],
         "title": "MilitaryStatus",
         "type": "string"
-      },
-      "NaturalLanguageCriterionMatch": {
-        "additionalProperties": false,
-        "description": "Matched natural-language criterion for one scraped item.",
-        "properties": {
-          "criterion": {
-            "minLength": 1,
-            "title": "Criterion",
-            "type": "string"
-          },
-          "rationale": {
-            "minLength": 1,
-            "title": "Rationale",
-            "type": "string"
-          }
-        },
-        "required": [
-          "criterion",
-          "rationale"
-        ],
-        "title": "NaturalLanguageCriterionMatch",
-        "type": "object"
       },
       "PiiExpansionItem": {
         "additionalProperties": false,
@@ -1090,6 +1184,43 @@
         "title": "ResponseMode",
         "type": "string"
       },
+      "RiskAssessment": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "default": 0.0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "level": {
+            "$ref": "#/components/schemas/RiskLevel",
+            "default": "unknown"
+          },
+          "rationale": {
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rationale"
+        ],
+        "title": "RiskAssessment",
+        "type": "object"
+      },
+      "RiskLevel": {
+        "enum": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ],
+        "title": "RiskLevel",
+        "type": "string"
+      },
       "SanitizedNormalizedAttributes": {
         "additionalProperties": false,
         "description": "Sanitized, connector-agnostic normalized attributes.",
@@ -1175,150 +1306,6 @@
         "title": "SanitizedNormalizedAttributes",
         "type": "object"
       },
-      "ScrapedItemType": {
-        "enum": [
-          "profile",
-          "post",
-          "comment",
-          "video",
-          "channel",
-          "other"
-        ],
-        "title": "ScrapedItemType",
-        "type": "string"
-      },
-      "ScrapedSocialItem": {
-        "additionalProperties": false,
-        "description": "Sanitized recent-activity or scraped social evidence item.",
-        "properties": {
-          "confidenceCategory": {
-            "$ref": "#/components/schemas/ConfidenceCategory"
-          },
-          "id": {
-            "minLength": 1,
-            "title": "Id",
-            "type": "string"
-          },
-          "itemKind": {
-            "$ref": "#/components/schemas/ScrapedItemType"
-          },
-          "label": {
-            "minLength": 1,
-            "title": "Label",
-            "type": "string"
-          },
-          "matchRationale": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Matchrationale",
-            "type": "array"
-          },
-          "matched": {
-            "default": false,
-            "title": "Matched",
-            "type": "boolean"
-          },
-          "matchedCriteria": {
-            "items": {
-              "$ref": "#/components/schemas/NaturalLanguageCriterionMatch"
-            },
-            "title": "Matchedcriteria",
-            "type": "array"
-          },
-          "matchedInputs": {
-            "items": {
-              "$ref": "#/components/schemas/MatchedInputReference"
-            },
-            "title": "Matchedinputs",
-            "type": "array"
-          },
-          "normalizedAttributes": {
-            "$ref": "#/components/schemas/SanitizedNormalizedAttributes"
-          },
-          "platform": {
-            "$ref": "#/components/schemas/SocialPlatform"
-          },
-          "publishedAt": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Publishedat"
-          },
-          "safeMetadata": {
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "items": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "boolean"
-                      },
-                      {
-                        "type": "integer"
-                      },
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "type": "array"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "title": "Safemetadata",
-            "type": "object"
-          },
-          "summary": {
-            "minLength": 1,
-            "title": "Summary",
-            "type": "string"
-          },
-          "type": {
-            "const": "social_activity",
-            "default": "social_activity",
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "label",
-          "summary",
-          "confidenceCategory",
-          "platform",
-          "itemKind"
-        ],
-        "title": "ScrapedSocialItem",
-        "type": "object"
-      },
       "ServiceStatusResponse": {
         "additionalProperties": false,
         "description": "Standard health and readiness response.",
@@ -1349,71 +1336,10 @@
         "title": "ServiceStatusResponse",
         "type": "object"
       },
-      "SocialMatchRequest": {
+      "SocialAnalysisTimeRange": {
         "additionalProperties": false,
-        "description": "Supported request payload for v1 social profile matching.",
         "properties": {
-          "includeRecentActivity": {
-            "default": true,
-            "title": "Includerecentactivity",
-            "type": "boolean"
-          },
-          "matchingCriteria": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Matchingcriteria",
-            "type": "array"
-          },
-          "maxCandidatesPerPlatform": {
-            "default": 3,
-            "maximum": 5.0,
-            "minimum": 1.0,
-            "title": "Maxcandidatesperplatform",
-            "type": "integer"
-          },
-          "platforms": {
-            "items": {
-              "$ref": "#/components/schemas/SocialPlatform"
-            },
-            "title": "Platforms",
-            "type": "array"
-          },
-          "subject": {
-            "$ref": "#/components/schemas/SocialMatchSubject"
-          }
-        },
-        "required": [
-          "subject"
-        ],
-        "title": "SocialMatchRequest",
-        "type": "object"
-      },
-      "SocialMatchResult": {
-        "additionalProperties": false,
-        "description": "Inline or final social profile match result payload.",
-        "properties": {
-          "capability": {
-            "const": "social_match",
-            "default": "social_match",
-            "title": "Capability",
-            "type": "string"
-          },
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/SocialProfileMatchItem"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "limit": {
-            "default": 25,
-            "maximum": 25.0,
-            "minimum": 1.0,
-            "title": "Limit",
-            "type": "integer"
-          },
-          "nextCursor": {
+          "end": {
             "anyOf": [
               {
                 "type": "string"
@@ -1422,237 +1348,52 @@
                 "type": "null"
               }
             ],
-            "title": "Nextcursor"
+            "title": "End"
           },
-          "total": {
+          "start": {
             "anyOf": [
               {
-                "minimum": 0.0,
-                "type": "integer"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Total"
-          },
-          "warnings": {
-            "items": {
-              "$ref": "#/components/schemas/ApiWarning"
-            },
-            "title": "Warnings",
-            "type": "array"
+            "title": "Start"
           }
         },
-        "title": "SocialMatchResult",
+        "title": "SocialAnalysisTimeRange",
         "type": "object"
       },
-      "SocialMatchRunRequest": {
-        "additionalProperties": false,
-        "description": "Run endpoint payload for social profile matching.",
-        "properties": {
-          "includeRecentActivity": {
-            "default": true,
-            "title": "Includerecentactivity",
-            "type": "boolean"
-          },
-          "matchingCriteria": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Matchingcriteria",
-            "type": "array"
-          },
-          "maxCandidatesPerPlatform": {
-            "default": 3,
-            "maximum": 5.0,
-            "minimum": 1.0,
-            "title": "Maxcandidatesperplatform",
-            "type": "integer"
-          },
-          "platforms": {
-            "items": {
-              "$ref": "#/components/schemas/SocialPlatform"
-            },
-            "title": "Platforms",
-            "type": "array"
-          },
-          "responseMode": {
-            "$ref": "#/components/schemas/ResponseMode",
-            "default": "sync"
-          },
-          "subject": {
-            "$ref": "#/components/schemas/SocialMatchSubject"
-          }
-        },
-        "required": [
-          "subject"
-        ],
-        "title": "SocialMatchRunRequest",
-        "type": "object"
-      },
-      "SocialMatchSubject": {
-        "additionalProperties": false,
-        "description": "Subject details supported by v1 social profile matching.",
-        "properties": {
-          "aliases": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Aliases",
-            "type": "array"
-          },
-          "knownEmails": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Knownemails",
-            "type": "array"
-          },
-          "knownEmployers": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Knownemployers",
-            "type": "array"
-          },
-          "knownLocations": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Knownlocations",
-            "type": "array"
-          },
-          "knownPhones": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Knownphones",
-            "type": "array"
-          },
-          "knownSocialUrls": {
-            "items": {
-              "format": "uri",
-              "minLength": 1,
-              "type": "string"
-            },
-            "title": "Knownsocialurls",
-            "type": "array"
-          },
-          "knownUsernames": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Knownusernames",
-            "type": "array"
-          },
-          "name": {
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "title": "SocialMatchSubject",
-        "type": "object"
-      },
-      "SocialPlatform": {
+      "SocialDataType": {
         "enum": [
-          "x",
-          "instagram",
-          "telegram",
-          "youtube",
-          "facebook"
+          "posts",
+          "comments",
+          "bio",
+          "media_ocr",
+          "links",
+          "relationships"
         ],
-        "title": "SocialPlatform",
+        "title": "SocialDataType",
         "type": "string"
       },
-      "SocialProfileFacts": {
+      "SocialMatchedRecord": {
         "additionalProperties": false,
-        "description": "Sanitized profile facts surfaced to API consumers.",
+        "description": "Matched social record returned by the base Match layer.",
         "properties": {
-          "bio": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Bio"
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
           },
-          "followersCount": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Followerscount"
-          },
-          "location": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Location"
-          },
-          "verified": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Verified"
-          }
-        },
-        "title": "SocialProfileFacts",
-        "type": "object"
-      },
-      "SocialProfileMatchItem": {
-        "additionalProperties": false,
-        "description": "Normalized candidate profile output for social matching.",
-        "properties": {
           "confidenceCategory": {
             "$ref": "#/components/schemas/ConfidenceCategory"
           },
-          "contradictions": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Contradictions",
-            "type": "array"
-          },
-          "criteria": {
-            "items": {
-              "$ref": "#/components/schemas/MatchCriterionRecord"
-            },
-            "title": "Criteria",
-            "type": "array"
-          },
-          "displayName": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Displayname"
+          "evidenceExcerpt": {
+            "minLength": 1,
+            "title": "Evidenceexcerpt",
+            "type": "string"
           },
           "id": {
             "minLength": 1,
@@ -1671,6 +1412,13 @@
             "title": "Matchrationale",
             "type": "array"
           },
+          "matchedCriteria": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Matchedcriteria",
+            "type": "array"
+          },
           "matchedInputs": {
             "items": {
               "$ref": "#/components/schemas/MatchedInputReference"
@@ -1684,15 +1432,22 @@
           "platform": {
             "$ref": "#/components/schemas/SocialPlatform"
           },
-          "profileFacts": {
+          "publishedAt": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/SocialProfileFacts"
+                "format": "date-time",
+                "type": "string"
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Publishedat"
+          },
+          "reasonForMatch": {
+            "minLength": 1,
+            "title": "Reasonformatch",
+            "type": "string"
           },
           "safeMetadata": {
             "additionalProperties": {
@@ -1739,46 +1494,334 @@
             "title": "Safemetadata",
             "type": "object"
           },
-          "score": {
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Score",
-            "type": "number"
+          "sourceProfileUrl": {
+            "minLength": 1,
+            "title": "Sourceprofileurl",
+            "type": "string"
           },
-          "scrapedItems": {
-            "items": {
-              "$ref": "#/components/schemas/ScrapedSocialItem"
-            },
-            "title": "Scrapeditems",
-            "type": "array"
+          "sourceRecord": {
+            "additionalProperties": true,
+            "title": "Sourcerecord",
+            "type": "object"
           },
           "summary": {
             "minLength": 1,
             "title": "Summary",
             "type": "string"
           },
-          "type": {
-            "const": "social_profile",
-            "default": "social_profile",
-            "title": "Type",
-            "type": "string"
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
           },
-          "username": {
-            "minLength": 1,
-            "title": "Username",
+          "type": {
+            "enum": [
+              "post",
+              "comment",
+              "media",
+              "link",
+              "profile_field",
+              "relationship",
+              "video"
+            ],
+            "title": "Type",
             "type": "string"
           }
         },
         "required": [
           "id",
+          "type",
           "label",
           "summary",
           "confidenceCategory",
           "platform",
-          "username",
-          "score"
+          "sourceProfileUrl",
+          "evidenceExcerpt",
+          "confidence",
+          "reasonForMatch"
         ],
-        "title": "SocialProfileMatchItem",
+        "title": "SocialMatchedRecord",
+        "type": "object"
+      },
+      "SocialPlatform": {
+        "enum": [
+          "x",
+          "instagram",
+          "telegram",
+          "youtube",
+          "facebook"
+        ],
+        "title": "SocialPlatform",
+        "type": "string"
+      },
+      "SocialProfileAnalysisMatchConfig": {
+        "additionalProperties": false,
+        "description": "Base Match configuration for selecting relevant records.",
+        "properties": {
+          "confidenceThreshold": {
+            "default": 0.6,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidencethreshold",
+            "type": "number"
+          },
+          "criteria": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Criteria",
+            "type": "array"
+          },
+          "customPrompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customprompt"
+          },
+          "dataTypes": {
+            "default": [
+              "posts",
+              "comments",
+              "bio",
+              "media_ocr",
+              "links"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SocialDataType"
+            },
+            "title": "Datatypes",
+            "type": "array"
+          },
+          "maxRecords": {
+            "default": 25,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Maxrecords",
+            "type": "integer"
+          },
+          "timeRange": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SocialAnalysisTimeRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "SocialProfileAnalysisMatchConfig",
+        "type": "object"
+      },
+      "SocialProfileAnalysisRequest": {
+        "additionalProperties": false,
+        "description": "Social Profile Analysis request payload.",
+        "properties": {
+          "analysisTypes": {
+            "default": [
+              "match"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AnalysisType"
+            },
+            "title": "Analysistypes",
+            "type": "array"
+          },
+          "behavioralAnalysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BehavioralAnalysisConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "match": {
+            "$ref": "#/components/schemas/SocialProfileAnalysisMatchConfig"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/SocialProfileAnalysisSubject"
+          }
+        },
+        "required": [
+          "subject",
+          "match"
+        ],
+        "title": "SocialProfileAnalysisRequest",
+        "type": "object"
+      },
+      "SocialProfileAnalysisResult": {
+        "additionalProperties": false,
+        "description": "Inline or final Social Profile Analysis result payload.",
+        "properties": {
+          "analysisTypes": {
+            "default": [
+              "match"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AnalysisType"
+            },
+            "title": "Analysistypes",
+            "type": "array"
+          },
+          "behavioralAnalysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BehavioralAnalysisResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "capability": {
+            "const": "social_profile_analysis",
+            "default": "social_profile_analysis",
+            "title": "Capability",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SocialMatchedRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 25,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "match": {
+            "$ref": "#/components/schemas/MatchAnalysisResult"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/SocialProfileAnalysisSubject"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/ApiWarning"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "workflowType": {
+            "const": "social_profile_analysis",
+            "default": "social_profile_analysis",
+            "title": "Workflowtype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject",
+          "match"
+        ],
+        "title": "SocialProfileAnalysisResult",
+        "type": "object"
+      },
+      "SocialProfileAnalysisRunRequest": {
+        "additionalProperties": false,
+        "description": "Run endpoint payload for Social Profile Analysis.",
+        "properties": {
+          "analysisTypes": {
+            "default": [
+              "match"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AnalysisType"
+            },
+            "title": "Analysistypes",
+            "type": "array"
+          },
+          "behavioralAnalysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BehavioralAnalysisConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "match": {
+            "$ref": "#/components/schemas/SocialProfileAnalysisMatchConfig"
+          },
+          "responseMode": {
+            "$ref": "#/components/schemas/ResponseMode",
+            "default": "sync"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/SocialProfileAnalysisSubject"
+          }
+        },
+        "required": [
+          "subject",
+          "match"
+        ],
+        "title": "SocialProfileAnalysisRunRequest",
+        "type": "object"
+      },
+      "SocialProfileAnalysisSubject": {
+        "additionalProperties": false,
+        "description": "Known profile subject for social profile analysis.",
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "socialMediaUrls": {
+            "items": {
+              "format": "uri",
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Socialmediaurls",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SocialProfileAnalysisSubject",
         "type": "object"
       },
       "SubjectEthnicity": {
@@ -1805,6 +1848,60 @@
           "Unknown"
         ],
         "title": "SubjectGender",
+        "type": "string"
+      },
+      "TargetContext": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TargetContextType",
+            "default": "other"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "TargetContext",
+        "type": "object"
+      },
+      "TargetContextType": {
+        "enum": [
+          "person",
+          "organization",
+          "school",
+          "company",
+          "public_figure",
+          "event",
+          "location",
+          "institution",
+          "other"
+        ],
+        "title": "TargetContextType",
+        "type": "string"
+      },
+      "TimeBucket": {
+        "enum": [
+          "day",
+          "week",
+          "month"
+        ],
+        "title": "TimeBucket",
         "type": "string"
       },
       "ValidationError": {
@@ -2589,7 +2686,7 @@
   },
   "info": {
     "description": "API-first OSINT service for customer intelligence workflows.\n\nAuthentication: send the provisioned API key as `X-API-Key: <key>` or `Authorization: Bearer <key>`.\n\nAll capability responses return normalized, deduplicated, connector-agnostic outputs. Provider provenance\nand connector-specific identifiers are intentionally excluded from public result payloads. Raw source URLs are\nexcluded except for web/adverse-media hits, where `resultUrl` intentionally exposes the full page URL.\n\nEach capability supports inline execution, async job lookup, and server-sent event streaming.",
-    "summary": "Deployable API-first intelligence service for web search, PII expansion, and social profile matching.",
+    "summary": "Deployable API-first intelligence service for web search, PII expansion, and social profile analysis.",
     "title": "intelligence-api",
     "version": "0.1.0"
   },
@@ -2823,15 +2920,15 @@
         ]
       }
     },
-    "/v1/social-profile-match": {
+    "/v1/social-profile-analysis": {
       "post": {
-        "description": "Create a social-profile-match job and wait for an inline result when `responseMode` is `sync`. If the job does not finish before the inline timeout, or when `responseMode` is `async`, the API returns a persisted job envelope. Every response includes `X-Job-Id` for later lookup.",
-        "operationId": "run_social_profile_match_v1_social_profile_match_post",
+        "description": "Create a Social Profile Analysis job for known social profile URLs. The base Match layer returns matched records; optional Behavioral Analysis adds interpretation over those matched records. When `responseMode` is `sync`, the API waits for an inline result until the configured timeout. Every response includes `X-Job-Id`.",
+        "operationId": "run_social_profile_analysis_v1_social_profile_analysis_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SocialMatchRunRequest"
+                "$ref": "#/components/schemas/SocialProfileAnalysisRunRequest"
               }
             }
           },
@@ -2844,17 +2941,17 @@
                 "schema": {
                   "anyOf": [
                     {
-                      "$ref": "#/components/schemas/SocialMatchResult"
+                      "$ref": "#/components/schemas/SocialProfileAnalysisResult"
                     },
                     {
-                      "$ref": "#/components/schemas/JobEnvelope_SocialMatchResult_"
+                      "$ref": "#/components/schemas/JobEnvelope_SocialProfileAnalysisResult_"
                     }
                   ],
-                  "title": "Response Run Social Profile Match V1 Social Profile Match Post"
+                  "title": "Response Run Social Profile Analysis V1 Social Profile Analysis Post"
                 }
               }
             },
-            "description": "Normalized scored candidate profiles when completed inline, otherwise a job envelope."
+            "description": "Matched social records and optional behavioral analysis when completed inline, otherwise a job envelope."
           },
           "422": {
             "content": {
@@ -2875,16 +2972,16 @@
             "ApiKeyAuth": []
           }
         ],
-        "summary": "Run social profile match analysis",
+        "summary": "Run Social Profile Analysis",
         "tags": [
-          "social-profile-match"
+          "social-profile-analysis"
         ]
       }
     },
-    "/v1/social-profile-match/jobs/{job_id}": {
+    "/v1/social-profile-analysis/jobs/{job_id}": {
       "get": {
-        "description": "Read the persisted job envelope for one social-profile-match run. When the job has completed, the `result` field contains a paginated page of normalized items controlled by the `limit` and `cursor` query parameters.",
-        "operationId": "get_social_profile_match_job_v1_social_profile_match_jobs__job_id__get",
+        "description": "Read the persisted job envelope for one Social Profile Analysis run. When complete, `result.match.matchedRecords` and `result.items` contain the requested matched-record page.",
+        "operationId": "get_social_profile_analysis_job_v1_social_profile_analysis_jobs__job_id__get",
         "parameters": [
           {
             "in": "path",
@@ -2901,7 +2998,7 @@
             "required": false,
             "schema": {
               "default": 25,
-              "maximum": 25,
+              "maximum": 100,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -2929,11 +3026,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JobEnvelope_SocialMatchResult_"
+                  "$ref": "#/components/schemas/JobEnvelope_SocialProfileAnalysisResult_"
                 }
               }
             },
-            "description": "Persisted job state with an optional paginated result page."
+            "description": "Persisted job state with an optional paginated Social Profile Analysis result."
           },
           "422": {
             "content": {
@@ -2954,21 +3051,21 @@
             "ApiKeyAuth": []
           }
         ],
-        "summary": "Read a social profile match job",
+        "summary": "Read a Social Profile Analysis job",
         "tags": [
-          "social-profile-match"
+          "social-profile-analysis"
         ]
       }
     },
-    "/v1/social-profile-match/stream": {
+    "/v1/social-profile-analysis/stream": {
       "post": {
-        "description": "Create a persisted social-profile-match job and immediately stream typed server-sent events until completion. Use the `X-Job-Id` response header to reconnect at `GET /v1/social-profile-match/jobs/{job_id}/stream` with `Last-Event-ID`.",
-        "operationId": "stream_social_profile_match_v1_social_profile_match_stream_post",
+        "description": "Create a persisted Social Profile Analysis job and stream typed server-sent events until completion. Use the `X-Job-Id` response header to reconnect at `GET /v1/social-profile-analysis/jobs/{job_id}/stream`.",
+        "operationId": "stream_social_profile_analysis_v1_social_profile_analysis_stream_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SocialMatchRequest"
+                "$ref": "#/components/schemas/SocialProfileAnalysisRequest"
               }
             }
           },
@@ -3003,9 +3100,9 @@
             "ApiKeyAuth": []
           }
         ],
-        "summary": "Create and stream a social profile match job",
+        "summary": "Create and stream a Social Profile Analysis job",
         "tags": [
-          "social-profile-match"
+          "social-profile-analysis"
         ]
       }
     },
@@ -3212,8 +3309,8 @@
       "name": "pii-expansion"
     },
     {
-      "description": "Find and score candidate social profiles against supplied corroborating hints and natural-language activity criteria.",
-      "name": "social-profile-match"
+      "description": "Analyze known social profile URLs: base Match returns matching records, optional Behavioral Analysis explains patterns and risk signals.",
+      "name": "social-profile-analysis"
     },
     {
       "description": "Operational liveness and readiness endpoints.",

@@ -80,11 +80,11 @@
             ]
           },
           {
-            "group": "SOCIAL PROFILE MATCH",
+            "group": "SOCIAL PROFILE ANALYSIS",
             "pages": [
-              "intelligence-engine/api/social-profile-match-run",
-              "intelligence-engine/api/social-profile-match-stream",
-              "intelligence-engine/api/social-profile-match-job"
+              "intelligence-engine/api/social-profile-analysis-run",
+              "intelligence-engine/api/social-profile-analysis-stream",
+              "intelligence-engine/api/social-profile-analysis-job"
             ]
           },
           {

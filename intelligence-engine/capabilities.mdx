@@ -23,11 +23,11 @@ Results include `identity_candidate` items only. Each returned item includes `co
 
 PII expansion dedupes exact identifier matches algorithmically first. AI semantic dedupe and validation then merge compatible identity variants or exclude irrelevant/junk identifiers. The AI step can only choose merge/keep-separate or include/exclude and never changes returned values.
 
-## Social profile match
+## Social Profile Analysis
 
-Use social profile match to discover and score candidate social profiles against supplied subject hints such as names, locations, employers, usernames, social URLs, and natural-language matching criteria. This capability is intended for profile-discovery and profile-verification workflows where corroborating hints are available.
+Use Social Profile Analysis when the caller already knows the social profile URL(s) to analyze. The base `match` layer retrieves records from those profiles and returns posts, comments, videos, profile fields, and other evidence that match analyst criteria or a custom prompt.
 
-Results include `confidenceCategory`, scoring rationale, contradictions, profile facts, matched criteria, and recent activity when available.
+Optional `behavioral_analysis` runs on top of the matched records. It can summarize behavior over time, identify escalation or repeated target mentions, assess risk signals when a target context is provided, and explain limits. This capability is not a person-resolution or candidate-profile discovery workflow.
 
 ## Output guarantees
 
