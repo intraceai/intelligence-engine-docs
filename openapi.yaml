@@ -1009,6 +1009,26 @@
       "PiiExpansionRequest": {
         "additionalProperties": false,
         "description": "Supported request payload for v1 PII expansion.",
+        "examples": [
+          {
+            "depth": "standard",
+            "maxCandidates": 10,
+            "seeds": {
+              "emails": [
+                "jared@example.com"
+              ],
+              "phones": [
+                "+15555550100"
+              ],
+              "usernames": [
+                "jaredg"
+              ]
+            },
+            "subject": {
+              "name": "Jared Gizersky"
+            }
+          }
+        ],
         "properties": {
           "depth": {
             "$ref": "#/components/schemas/ExpansionDepth",
@@ -1095,6 +1115,27 @@
       "PiiExpansionRunRequest": {
         "additionalProperties": false,
         "description": "Run endpoint payload for PII expansion.",
+        "examples": [
+          {
+            "depth": "standard",
+            "maxCandidates": 10,
+            "responseMode": "sync",
+            "seeds": {
+              "emails": [
+                "jared@example.com"
+              ],
+              "phones": [
+                "+15555550100"
+              ],
+              "usernames": [
+                "jaredg"
+              ]
+            },
+            "subject": {
+              "name": "Jared Gizersky"
+            }
+          }
+        ],
         "properties": {
           "depth": {
             "$ref": "#/components/schemas/ExpansionDepth",
@@ -1627,6 +1668,27 @@
       "SocialProfileAnalysisRequest": {
         "additionalProperties": false,
         "description": "Social Profile Analysis request payload.",
+        "examples": [
+          {
+            "analysisTypes": [
+              "match"
+            ],
+            "match": {
+              "criteria": [
+                "fraud",
+                "theft",
+                "crime"
+              ],
+              "maxRecords": 25
+            },
+            "subject": {
+              "name": "Jared Gizersky",
+              "socialMediaUrls": [
+                "https://x.com/jaredg"
+              ]
+            }
+          }
+        ],
         "properties": {
           "analysisTypes": {
             "default": [
@@ -1759,6 +1821,28 @@
       "SocialProfileAnalysisRunRequest": {
         "additionalProperties": false,
         "description": "Run endpoint payload for Social Profile Analysis.",
+        "examples": [
+          {
+            "analysisTypes": [
+              "match"
+            ],
+            "match": {
+              "criteria": [
+                "fraud",
+                "theft",
+                "crime"
+              ],
+              "maxRecords": 25
+            },
+            "responseMode": "sync",
+            "subject": {
+              "name": "Jared Gizersky",
+              "socialMediaUrls": [
+                "https://x.com/jaredg"
+              ]
+            }
+          }
+        ],
         "properties": {
           "analysisTypes": {
             "default": [
@@ -2131,8 +2215,22 @@
       "WebSearchRequest": {
         "additionalProperties": false,
         "description": "Supported request payload for the web/adverse-media capability.",
+        "examples": [
+          {
+            "adverseTerms": [
+              "fraud",
+              "theft",
+              "crime"
+            ],
+            "subject": {
+              "name": "Jared Gizersky",
+              "type": "person"
+            }
+          }
+        ],
         "properties": {
           "adverseTerms": {
+            "description": "Top-level adverse-media terms to search alongside the subject.",
             "items": {
               "type": "string"
             },
@@ -2254,8 +2352,23 @@
       "WebSearchRunRequest": {
         "additionalProperties": false,
         "description": "Run endpoint payload for web search.",
+        "examples": [
+          {
+            "adverseTerms": [
+              "fraud",
+              "theft",
+              "crime"
+            ],
+            "responseMode": "sync",
+            "subject": {
+              "name": "Jared Gizersky",
+              "type": "person"
+            }
+          }
+        ],
         "properties": {
           "adverseTerms": {
+            "description": "Top-level adverse-media terms to search alongside the subject.",
             "items": {
               "type": "string"
             },
@@ -2741,6 +2854,31 @@
         "requestBody": {
           "content": {
             "application/json": {
+              "examples": {
+                "seededIdentityExpansion": {
+                  "description": "Expand from one or more supported email, phone, or username seeds.",
+                  "summary": "Seeded identity expansion",
+                  "value": {
+                    "depth": "standard",
+                    "maxCandidates": 10,
+                    "responseMode": "sync",
+                    "seeds": {
+                      "emails": [
+                        "jared@example.com"
+                      ],
+                      "phones": [
+                        "+15555550100"
+                      ],
+                      "usernames": [
+                        "jaredg"
+                      ]
+                    },
+                    "subject": {
+                      "name": "Jared Gizersky"
+                    }
+                  }
+                }
+              },
               "schema": {
                 "$ref": "#/components/schemas/PiiExpansionRunRequest"
               }
@@ -2878,6 +3016,30 @@
         "requestBody": {
           "content": {
             "application/json": {
+              "examples": {
+                "seededIdentityExpansion": {
+                  "description": "Expand from one or more supported email, phone, or username seeds.",
+                  "summary": "Seeded identity expansion",
+                  "value": {
+                    "depth": "standard",
+                    "maxCandidates": 10,
+                    "seeds": {
+                      "emails": [
+                        "jared@example.com"
+                      ],
+                      "phones": [
+                        "+15555550100"
+                      ],
+                      "usernames": [
+                        "jaredg"
+                      ]
+                    },
+                    "subject": {
+                      "name": "Jared Gizersky"
+                    }
+                  }
+                }
+              },
               "schema": {
                 "$ref": "#/components/schemas/PiiExpansionRequest"
               }
@@ -2927,6 +3089,32 @@
         "requestBody": {
           "content": {
             "application/json": {
+              "examples": {
+                "knownProfileMatch": {
+                  "description": "Analyze known social profile URLs against natural-language match criteria.",
+                  "summary": "Known-profile match analysis",
+                  "value": {
+                    "analysisTypes": [
+                      "match"
+                    ],
+                    "match": {
+                      "criteria": [
+                        "fraud",
+                        "theft",
+                        "crime"
+                      ],
+                      "maxRecords": 25
+                    },
+                    "responseMode": "sync",
+                    "subject": {
+                      "name": "Jared Gizersky",
+                      "socialMediaUrls": [
+                        "https://x.com/jaredg"
+                      ]
+                    }
+                  }
+                }
+              },
               "schema": {
                 "$ref": "#/components/schemas/SocialProfileAnalysisRunRequest"
               }
@@ -3064,6 +3252,31 @@
         "requestBody": {
           "content": {
             "application/json": {
+              "examples": {
+                "knownProfileMatch": {
+                  "description": "Analyze known social profile URLs against natural-language match criteria.",
+                  "summary": "Known-profile match analysis",
+                  "value": {
+                    "analysisTypes": [
+                      "match"
+                    ],
+                    "match": {
+                      "criteria": [
+                        "fraud",
+                        "theft",
+                        "crime"
+                      ],
+                      "maxRecords": 25
+                    },
+                    "subject": {
+                      "name": "Jared Gizersky",
+                      "socialMediaUrls": [
+                        "https://x.com/jaredg"
+                      ]
+                    }
+                  }
+                }
+              },
               "schema": {
                 "$ref": "#/components/schemas/SocialProfileAnalysisRequest"
               }
@@ -3113,6 +3326,24 @@
         "requestBody": {
           "content": {
             "application/json": {
+              "examples": {
+                "personAdverseMedia": {
+                  "description": "Search for adverse-media terms as top-level filters for a person subject.",
+                  "summary": "Person adverse-media search",
+                  "value": {
+                    "adverseTerms": [
+                      "fraud",
+                      "theft",
+                      "crime"
+                    ],
+                    "responseMode": "sync",
+                    "subject": {
+                      "name": "Jared Gizersky",
+                      "type": "person"
+                    }
+                  }
+                }
+              },
               "schema": {
                 "$ref": "#/components/schemas/WebSearchRunRequest"
               }
@@ -3250,6 +3481,23 @@
         "requestBody": {
           "content": {
             "application/json": {
+              "examples": {
+                "personAdverseMedia": {
+                  "description": "Search for adverse-media terms as top-level filters for a person subject.",
+                  "summary": "Person adverse-media search",
+                  "value": {
+                    "adverseTerms": [
+                      "fraud",
+                      "theft",
+                      "crime"
+                    ],
+                    "subject": {
+                      "name": "Jared Gizersky",
+                      "type": "person"
+                    }
+                  }
+                }
+              },
               "schema": {
                 "$ref": "#/components/schemas/WebSearchRequest"
               }
