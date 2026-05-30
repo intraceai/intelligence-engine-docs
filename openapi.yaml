@@ -782,20 +782,6 @@
         "additionalProperties": false,
         "description": "Normalized identity-candidate output for PII expansion.",
         "properties": {
-          "addresses": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Addresses",
-            "type": "array"
-          },
-          "associates": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Associates",
-            "type": "array"
-          },
           "confidenceCategory": {
             "$ref": "#/components/schemas/ConfidenceCategory"
           },
@@ -838,25 +824,11 @@
           "normalizedAttributes": {
             "$ref": "#/components/schemas/SanitizedNormalizedAttributes"
           },
-          "organizations": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Organizations",
-            "type": "array"
-          },
           "phones": {
             "items": {
               "type": "string"
             },
             "title": "Phones",
-            "type": "array"
-          },
-          "relatives": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Relatives",
             "type": "array"
           },
           "riskFlags": {
@@ -980,14 +952,7 @@
           },
           "items": {
             "items": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/PiiExpansionItem"
-                },
-                {
-                  "$ref": "#/components/schemas/SocialProfileMatchItem"
-                }
-              ]
+              "$ref": "#/components/schemas/PiiExpansionItem"
             },
             "title": "Items",
             "type": "array"
@@ -1069,20 +1034,6 @@
         "additionalProperties": false,
         "description": "Supported seed types for v1 identity expansion.",
         "properties": {
-          "addresses": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Addresses",
-            "type": "array"
-          },
-          "domains": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Domains",
-            "type": "array"
-          },
           "emails": {
             "items": {
               "type": "string"
@@ -1119,29 +1070,10 @@
             "title": "Aliases",
             "type": "array"
           },
-          "dob": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dob"
-          },
           "name": {
             "minLength": 1,
             "title": "Name",
             "type": "string"
-          },
-          "regions": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Regions",
-            "type": "array"
           }
         },
         "required": [
@@ -3276,7 +3208,7 @@
       "name": "web-search"
     },
     {
-      "description": "Expand known identifiers into normalized identity candidates and related sanitized social/profile signals.",
+      "description": "Expand known identifiers (email, phone, and username) into normalized identity candidates.",
       "name": "pii-expansion"
     },
     {

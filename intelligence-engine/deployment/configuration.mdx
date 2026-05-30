@@ -3,7 +3,7 @@ title: Configuration
 description: Runtime configuration notes for customer deployments
 ---
 
-The API is deployed as a containerized service. Configure accepted API keys, optional Redis/Valkey-backed shared state, connector runtime settings, and optional social-match evaluator settings through environment variables.
+The API is deployed as a containerized service. Configure accepted API keys, optional Redis/Valkey-backed shared state, connector runtime settings, social-match evaluator settings, and required PII expansion AI settings through environment variables.
 
 Common variables:
 
@@ -14,5 +14,8 @@ Common variables:
 - `INTELLIGENCE_API_SOCIAL_MATCH_EVALUATOR_BASE_URL`: optional external evaluator base URL.
 - `INTELLIGENCE_API_SOCIAL_MATCH_EVALUATOR_API_KEY`: optional external evaluator API key.
 - `INTELLIGENCE_API_SOCIAL_MATCH_EVALUATOR_MODEL`: optional evaluator model name.
+- `INTELLIGENCE_API_PII_EXPANSION_AI_API_KEY` or `OPENROUTER_API_KEY`: required for PII expansion semantic dedupe and validation.
+- `INTELLIGENCE_API_PII_EXPANSION_AI_MODEL`: PII expansion AI model name.
+- `INTELLIGENCE_API_PII_EXPANSION_AI_TIMEOUT_SECONDS`: PII expansion AI timeout.
 
 For multi-replica deployments, use Redis/Valkey-backed job storage and rate limiting so job lookup and request budgets are shared across instances.

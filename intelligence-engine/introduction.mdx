@@ -6,10 +6,10 @@ description: Guide to the Intrace Intelligence API
 The Intrace Intelligence API is an API-first OSINT service for customer intelligence workflows. It exposes three capabilities:
 
 - **Web search** for normalized web, news, and supported public social/adverse-media hits.
-- **PII expansion** for expanding known identifiers into identity candidates and related profile signals.
+- **PII expansion** for expanding email, phone, and username identifiers into identifier-only identity candidates.
 - **Social profile match** for finding and scoring candidate social profiles against corroborating hints and natural-language activity criteria.
 
-All capability responses are normalized, deduplicated, and shaped for API consumption. Web/adverse-media results include `resultUrl` so investigators can review the underlying page; PII expansion and social profile match results focus on normalized identity/profile signals and supporting context. Web search accepts expanded person-subject context for identity corroboration, exclusion, targeted query narrowing, and exact social-profile context retrieval.
+All capability responses are normalized, deduplicated, and shaped for API consumption. Web/adverse-media results include `resultUrl` so investigators can review the underlying page; PII expansion focuses on normalized identifier candidates, while social profile match focuses on identity/profile signals and supporting context. Web search accepts expanded person-subject context for identity corroboration, exclusion, targeted query narrowing, and exact social-profile context retrieval.
 
 ## Base URL
 

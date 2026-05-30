@@ -17,9 +17,11 @@ Results are returned as normalized web-hit items with `confidenceCategory`, matc
 
 ## PII expansion
 
-Use PII expansion to expand supplied seeds such as emails, phones, usernames, addresses, and domains into identity candidates and related social/profile signals. This capability is intended for lead enrichment, identity-resolution support, and discovering additional candidate identifiers from known inputs.
+Use PII expansion to expand supplied identifier seeds: emails, phones, and usernames. This capability is intentionally identifier-only; address/domain seeds, standalone name/DOB/region person searches, reverse-phone identity enrichment, broad person enrichment, and social-profile discovery are excluded.
 
-Results may include identity-candidate items and related social-profile items. Each returned item includes `confidenceCategory`, match rationale, matched inputs, normalized attributes, and metadata so consumers can rank and review candidate links. Breach-derived identity candidates preserve investigator-useful leak context in `safeMetadata` such as `breachSources`, `breachDates`, `exposedFields`, `credentialExposure`, and `credentialTypes`; credential values such as passwords, hashes, salts, tokens, and raw connector payloads are not returned.
+Results include `identity_candidate` items only. Each returned item includes `confidenceCategory`, match rationale, matched inputs, normalized identifier attributes, and safe metadata so consumers can rank and review candidate links. Breach-derived identity candidates may preserve safe field-level context such as `exposedFields`, `credentialExposure`, and `credentialTypes`; breach source names/dates, credential values, hashes, salts, tokens, and raw connector payloads are not returned.
+
+PII expansion dedupes exact identifier matches algorithmically first. AI semantic dedupe and validation then merge compatible identity variants or exclude irrelevant/junk identifiers. The AI step can only choose merge/keep-separate or include/exclude and never changes returned values.
 
 ## Social profile match
 
