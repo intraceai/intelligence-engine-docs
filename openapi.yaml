@@ -2076,7 +2076,7 @@
       },
       "WebSearchItem": {
         "additionalProperties": false,
-        "description": "Normalized web/adverse-media result item.",
+        "description": "Normalized web/media result item.",
         "properties": {
           "confidenceCategory": {
             "$ref": "#/components/schemas/ConfidenceCategory"
@@ -2137,7 +2137,7 @@
                 "type": "null"
               }
             ],
-            "description": "Full URL for web/adverse-media hits. Web results intentionally expose the source URL so investigators can review the underlying page.",
+            "description": "Full URL for web/media hits. Web results intentionally expose the source URL so investigators can review the underlying page.",
             "title": "Resulturl"
           },
           "safeMetadata": {
@@ -2214,7 +2214,7 @@
       },
       "WebSearchRequest": {
         "additionalProperties": false,
-        "description": "Supported request payload for the web/adverse-media capability.",
+        "description": "Supported request payload for the web/media capability.",
         "examples": [
           {
             "adverseTerms": [
@@ -2230,7 +2230,7 @@
         ],
         "properties": {
           "adverseTerms": {
-            "description": "Top-level adverse-media terms to search alongside the subject.",
+            "description": "Optional adverse-media terms to search alongside the subject. The service also uses a built-in adverse/legal/regulatory term pack.",
             "items": {
               "type": "string"
             },
@@ -2293,7 +2293,7 @@
       },
       "WebSearchResult": {
         "additionalProperties": false,
-        "description": "Inline or final web/adverse-media result payload.",
+        "description": "Inline or final web/media result payload.",
         "properties": {
           "capability": {
             "const": "web_search",
@@ -2368,7 +2368,7 @@
         ],
         "properties": {
           "adverseTerms": {
-            "description": "Top-level adverse-media terms to search alongside the subject.",
+            "description": "Optional adverse-media terms to search alongside the subject. The service also uses a built-in adverse/legal/regulatory term pack.",
             "items": {
               "type": "string"
             },
@@ -2435,7 +2435,7 @@
       },
       "WebSearchSocialAccount": {
         "additionalProperties": false,
-        "description": "Exact social account hint to enrich web/adverse-media context.",
+        "description": "Exact social account hint to enrich web/media context.",
         "properties": {
           "platform": {
             "anyOf": [
@@ -2477,7 +2477,7 @@
       },
       "WebSearchSubject": {
         "additionalProperties": false,
-        "description": "Search subject definition for web/adverse-media lookups.",
+        "description": "Search subject definition for web/media lookups.",
         "properties": {
           "aliases": {
             "items": {
@@ -2798,7 +2798,7 @@
     }
   },
   "info": {
-    "description": "API-first OSINT service for customer intelligence workflows.\n\nAuthentication: send the provisioned API key as `X-API-Key: <key>` or `Authorization: Bearer <key>`.\n\nAll capability responses return normalized, deduplicated, connector-agnostic outputs. Provider provenance\nand connector-specific identifiers are intentionally excluded from public result payloads. Raw source URLs are\nexcluded except for web/adverse-media hits, where `resultUrl` intentionally exposes the full page URL.\n\nEach capability supports inline execution, async job lookup, and server-sent event streaming.",
+    "description": "API-first OSINT service for customer intelligence workflows.\n\nAuthentication: send the provisioned API key as `X-API-Key: <key>` or `Authorization: Bearer <key>`.\n\nAll capability responses return normalized, deduplicated, connector-agnostic outputs. Provider provenance\nand connector-specific identifiers are intentionally excluded from public result payloads. Raw source URLs are\nexcluded except for web/media hits, where `resultUrl` intentionally exposes the full page URL.\n\nEach capability supports inline execution, async job lookup, and server-sent event streaming.",
     "summary": "Deployable API-first intelligence service for web search, PII expansion, and social profile analysis.",
     "title": "intelligence-api",
     "version": "0.1.0"
@@ -3328,8 +3328,8 @@
             "application/json": {
               "examples": {
                 "personAdverseMedia": {
-                  "description": "Search for adverse-media terms as top-level filters for a person subject.",
-                  "summary": "Person adverse-media search",
+                  "description": "Search public web/media with built-in adverse discovery for a person subject.",
+                  "summary": "Person web/media search",
                   "value": {
                     "adverseTerms": [
                       "fraud",
@@ -3389,7 +3389,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "summary": "Run web/adverse-media search",
+        "summary": "Run web/media search",
         "tags": [
           "web-search"
         ]
@@ -3468,7 +3468,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "summary": "Read a web/adverse-media job",
+        "summary": "Read a web/media search job",
         "tags": [
           "web-search"
         ]
@@ -3483,8 +3483,8 @@
             "application/json": {
               "examples": {
                 "personAdverseMedia": {
-                  "description": "Search for adverse-media terms as top-level filters for a person subject.",
-                  "summary": "Person adverse-media search",
+                  "description": "Search public web/media with built-in adverse discovery for a person subject.",
+                  "summary": "Person web/media search",
                   "value": {
                     "adverseTerms": [
                       "fraud",
@@ -3534,7 +3534,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "summary": "Create and stream a web/adverse-media job",
+        "summary": "Create and stream a web/media search job",
         "tags": [
           "web-search"
         ]
